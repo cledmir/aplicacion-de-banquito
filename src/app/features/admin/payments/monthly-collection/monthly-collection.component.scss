@@ -1,0 +1,175 @@
+@use 'styles/variables' as *;
+@use 'styles/mixins' as *;
+
+// ===== Month Selector =====
+.month-selector {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-xl;
+  margin-bottom: $spacing-xl;
+  flex-wrap: wrap;
+
+  mat-form-field { min-width: 200px; }
+}
+
+.month-summary {
+  display: flex;
+  gap: $spacing-lg;
+  padding-top: 6px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-tertiary;
+
+  .summary-label { font-size: $font-size-xs; color: $color-text-muted; }
+  .summary-value { font-size: $font-size-md; font-weight: $font-weight-bold; color: $color-text-primary; }
+
+  &.collected .summary-value { color: $color-success-light; }
+  &.pending .summary-value { color: $color-warning-light; }
+}
+
+// ===== Bulk Actions =====
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+
+  .bulk-btn {
+    font-weight: $font-weight-semibold;
+    mat-icon { margin-right: 4px; }
+  }
+
+  .processing-text {
+    font-size: $font-size-sm;
+    color: $color-accent;
+    font-weight: $font-weight-medium;
+    animation: pulse-text 0.8s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes pulse-text {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
+}
+
+// ===== Collection Card =====
+.collection-card {
+  @include card-base;
+  padding: 0;
+  overflow: hidden;
+}
+
+.collection-grid {
+  display: grid;
+  grid-template-columns: 2fr 60px 1.2fr 1.2fr 1fr 180px;
+  padding: $spacing-sm $spacing-lg;
+  align-items: center;
+  font-size: $font-size-sm;
+  gap: $spacing-xs;
+
+  &.header {
+    background: $color-bg-tertiary;
+    font-weight: $font-weight-semibold;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: $spacing-md $spacing-lg;
+  }
+
+  &.row {
+    border-bottom: 1px solid $glass-border;
+    transition: background $transition-fast;
+
+    &:hover { background: rgba($color-primary-light, 0.03); }
+    &:last-of-type { border-bottom: none; }
+
+    &.fully-paid { background: rgba($color-success, 0.04); }
+  }
+}
+
+.participant-name {
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.payment-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .paid { color: $color-success-light; text-decoration: line-through; opacity: 0.7; }
+  .pending { color: $color-warning-light; font-weight: $font-weight-semibold; }
+  .no-loan { color: $color-text-muted; }
+}
+
+.check-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: $color-success-light;
+}
+
+.total-cell {
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+// ===== Actions =====
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pay-btn {
+  font-size: 11px !important;
+  line-height: 28px !important;
+  padding: 0 8px !important;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    margin-right: 2px;
+  }
+
+  &.loan { color: $color-accent; border-color: rgba($color-accent, 0.3); }
+}
+
+.all-paid-badge {
+  font-size: $font-size-xs;
+  color: $color-success-light;
+  font-weight: $font-weight-medium;
+}
+
+// ===== Empty =====
+.empty-state {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-3xl;
+  text-align: center;
+
+  &__icon { font-size: 3rem; opacity: 0.5; }
+  h3 { color: $color-text-primary; }
+  p { color: $color-text-secondary; }
+}
+
+// ===== Responsive =====
+@include mobile-only {
+  .collection-grid {
+    grid-template-columns: 1.2fr 0.5fr 1fr 1fr;
+
+    &.header span:nth-child(5),
+    &.header span:nth-child(6),
+    &.row span:nth-child(5),
+    &.row div:nth-child(6) { display: none; }
+  }
+}

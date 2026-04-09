@@ -1,0 +1,165 @@
+@use 'styles/variables' as *;
+@use 'styles/mixins' as *;
+
+.add-form-card {
+  @include card-base;
+  margin-bottom: $spacing-xl;
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-md;
+    mat-icon { color: $color-primary-light; }
+  }
+}
+
+.add-form {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+
+  .user-select { flex: 2; min-width: 250px; }
+  .options-field { flex: 0 0 120px; }
+
+  button {
+    margin-top: 4px;
+    height: 56px;
+    min-width: 120px;
+  }
+}
+
+// ===== Participant Grid =====
+.participants-card {
+  @include card-base;
+  padding: 0;
+  overflow: hidden;
+}
+
+.participant-grid {
+  display: grid;
+  grid-template-columns: 40px 2fr 1fr 1.5fr 1fr 80px;
+  padding: $spacing-sm $spacing-lg;
+  align-items: center;
+  font-size: $font-size-sm;
+
+  &.header {
+    background: $color-bg-tertiary;
+    font-weight: $font-weight-semibold;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: $spacing-md $spacing-lg;
+  }
+
+  &.row {
+    border-bottom: 1px solid $glass-border;
+    transition: background $transition-fast;
+
+    &:hover { background: rgba($color-primary-light, 0.04); }
+    &:last-of-type { border-bottom: none; }
+  }
+}
+
+.row-num {
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.participant-name {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.late-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: $radius-full;
+  background: rgba($color-warning-light, 0.15);
+  color: $color-warning-light;
+  font-weight: $font-weight-semibold;
+}
+
+.options-count {
+  font-weight: $font-weight-semibold;
+}
+
+.money-value {
+  @include money-text;
+  color: $color-success-light;
+  font-size: $font-size-sm;
+}
+
+.status-active {
+  color: $color-success-light;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: center;
+
+  button { color: $color-text-muted; &:hover { color: $color-error; } }
+}
+
+// ===== Totals Row =====
+.totals-row {
+  display: grid;
+  grid-template-columns: 40px 2fr 1fr 1.5fr 1fr 80px;
+  padding: $spacing-md $spacing-lg;
+  background: $color-bg-tertiary;
+  border-top: 2px solid $glass-border;
+
+  .total-label {
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+  }
+
+  .total-value {
+    font-weight: $font-weight-bold;
+    font-size: $font-size-sm;
+  }
+}
+
+// ===== Empty State =====
+.empty-state {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-3xl;
+  text-align: center;
+
+  &__icon { font-size: 3rem; opacity: 0.5; }
+  h3 { color: $color-text-primary; }
+  p { color: $color-text-secondary; }
+}
+
+// ===== Responsive =====
+@include mobile-only {
+  .participant-grid {
+    grid-template-columns: 30px 1.5fr 0.8fr 0.8fr;
+
+    &.header span:nth-child(5),
+    &.header span:nth-child(6),
+    &.row span:nth-child(5),
+    &.row div:nth-child(6) {
+      display: none;
+    }
+  }
+
+  .totals-row {
+    grid-template-columns: 30px 1.5fr 0.8fr 0.8fr;
+
+    span:nth-child(5),
+    span:nth-child(6) { display: none; }
+  }
+}

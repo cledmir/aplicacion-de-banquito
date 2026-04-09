@@ -1,0 +1,141 @@
+@use 'styles/variables' as *;
+@use 'styles/mixins' as *;
+
+.form-container {
+  max-width: 700px;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xl;
+}
+
+// ===== Form Section =====
+.form-section {
+  @include card-base;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+
+    mat-icon {
+      color: $color-primary-light;
+    }
+  }
+}
+
+.form-row {
+  &.two-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $spacing-md;
+
+    @include mobile-only {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+// ===== Type Selector =====
+.type-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+}
+
+.type-card {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-lg;
+  border: 2px solid $glass-border;
+  border-radius: $radius-lg;
+  cursor: pointer;
+  transition: all $transition-base;
+
+  &:hover {
+    border-color: $color-text-muted;
+    background: $color-bg-tertiary;
+  }
+
+  &.selected {
+    border-color: $color-primary-light;
+    background: rgba($color-primary-light, 0.08);
+    box-shadow: $shadow-glow-primary;
+  }
+
+  &__emoji {
+    font-size: 2.5rem;
+  }
+
+  &__name {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__desc {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+}
+
+// ===== Preview =====
+.preview-card {
+  @include glass-card;
+  padding: $spacing-lg;
+  border-color: rgba($color-accent, 0.3);
+
+  h4 {
+    color: $color-accent;
+    font-size: $font-size-sm;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: $spacing-md;
+  }
+
+  .preview-details {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+
+    strong {
+      color: $color-text-primary;
+    }
+  }
+}
+
+// ===== Error =====
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-error, 0.1);
+  border: 1px solid rgba($color-error, 0.3);
+  border-radius: $radius-md;
+  color: $color-error-light;
+  font-size: $font-size-sm;
+}
+
+// ===== Actions =====
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-md;
+
+  button[type="submit"], a[mat-flat-button] {
+    min-width: 160px;
+  }
+}

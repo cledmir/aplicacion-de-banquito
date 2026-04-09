@@ -1,0 +1,146 @@
+@use 'styles/variables' as *;
+@use 'styles/mixins' as *;
+
+.balance-info {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-xl;
+  background: rgba($color-success, 0.08);
+  border: 1px solid rgba($color-success-light, 0.25);
+  border-radius: $radius-lg;
+
+  > mat-icon { color: $color-success-light; font-size: 28px; width: 28px; height: 28px; }
+
+  .balance-details { display: flex; flex-direction: column; }
+  .balance-label { font-size: $font-size-xs; color: $color-text-muted; }
+  .balance-value { font-size: $font-size-xl; font-weight: $font-weight-bold; color: $color-success-light; }
+}
+
+.form-container { max-width: 700px; }
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xl;
+}
+
+.form-section {
+  @include card-base;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+    mat-icon { color: $color-primary-light; }
+  }
+}
+
+.form-row.two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+  @include mobile-only { grid-template-columns: 1fr; }
+}
+
+// ===== Preview =====
+.preview-card {
+  @include glass-card;
+  padding: $spacing-lg;
+  border-color: rgba($color-accent, 0.3);
+
+  h4 {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-md;
+    color: $color-text-primary;
+  }
+}
+
+.calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm;
+}
+
+.calc-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $spacing-sm;
+  border-radius: $radius-sm;
+
+  &.highlight { background: rgba($color-primary-light, 0.06); }
+
+  .calc-label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+  .calc-value {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+
+    &.money { color: $color-success-light; }
+    &.accent { color: $color-accent; }
+    &.bold { font-size: $font-size-md; }
+  }
+}
+
+// ===== Installments =====
+.installments-preview {
+  margin-top: $spacing-lg;
+  padding-top: $spacing-md;
+  border-top: 1px solid $glass-border;
+
+  h5 {
+    font-size: $font-size-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+  }
+}
+
+.installment-row {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  gap: $spacing-sm;
+  padding: 4px 0;
+  font-size: $font-size-sm;
+  border-bottom: 1px solid rgba($glass-border, 0.5);
+
+  &:last-child { border-bottom: none; }
+
+  .inst-num { color: $color-text-muted; font-size: $font-size-xs; }
+  .inst-month { color: $color-text-primary; }
+  .inst-amount { color: $color-success-light; font-weight: $font-weight-medium; }
+}
+
+// ===== Error =====
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-error, 0.1);
+  border: 1px solid rgba($color-error, 0.3);
+  border-radius: $radius-md;
+  color: $color-error-light;
+  font-size: $font-size-sm;
+}
+
+// ===== Actions =====
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-md;
+}

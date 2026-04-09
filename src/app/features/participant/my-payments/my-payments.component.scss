@@ -1,0 +1,121 @@
+@use 'styles/variables' as *;
+@use 'styles/mixins' as *;
+
+.page-title {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  margin-bottom: $spacing-xl;
+}
+
+// ===== Summary Bar =====
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-md;
+  margin-bottom: $spacing-xl;
+
+  @include mobile-only { grid-template-columns: 1fr; }
+}
+
+.summary-item {
+  @include glass-card-hover;
+  padding: $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+
+  > mat-icon { font-size: 24px; width: 24px; height: 24px; color: $color-primary-light; }
+
+  .sum-label { font-size: $font-size-xs; color: $color-text-muted; display: block; }
+  .sum-value {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+
+    &.green { color: $color-success-light; }
+    &.blue { color: #60a5fa; }
+  }
+}
+
+// ===== Payments List =====
+.payments-list {
+  @include card-base;
+  padding: 0;
+  overflow: hidden;
+}
+
+.payment-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $glass-border;
+  transition: background $transition-fast;
+
+  &:hover { background: rgba($color-primary-light, 0.03); }
+  &:last-child { border-bottom: none; }
+}
+
+.payment-icon {
+  @include flex-center;
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-md;
+  flex-shrink: 0;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
+  &.contribution {
+    background: rgba($color-success-light, 0.12);
+    color: $color-success-light;
+  }
+  &.loan-pay {
+    background: rgba(#60a5fa, 0.12);
+    color: #60a5fa;
+  }
+}
+
+.payment-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  .pay-desc {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+  .pay-detail {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+}
+
+.payment-right {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+
+  .pay-amount {
+    font-weight: $font-weight-bold;
+    color: $color-success-light;
+    font-size: $font-size-sm;
+  }
+  .pay-date {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+}
+
+// ===== Empty =====
+.empty-state {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-3xl;
+  text-align: center;
+
+  .empty-icon { font-size: 3rem; opacity: 0.5; }
+  h3 { color: $color-text-primary; }
+  p { color: $color-text-secondary; }
+}
