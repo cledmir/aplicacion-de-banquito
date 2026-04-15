@@ -154,6 +154,19 @@ export const routes: Routes = [
   },
 
   // --- Redirects ---
-  { path: '', redirectTo: '/auth/login', pathMatch: 'full' },
-  { path: '**', redirectTo: '/auth/login' },
+  {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./features/auth/auto-redirect/auto-redirect.component').then(
+        (m) => m.AutoRedirectComponent,
+      ),
+  },
+  {
+    path: '**',
+    loadComponent: () =>
+      import('./features/auth/auto-redirect/auto-redirect.component').then(
+        (m) => m.AutoRedirectComponent,
+      ),
+  },
 ];

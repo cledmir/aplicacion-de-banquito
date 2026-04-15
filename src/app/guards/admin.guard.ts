@@ -2,13 +2,16 @@ import { inject } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
 import { AuthService } from '../data/services';
 
-export const adminGuard: CanActivateFn = () => {
+/**
+ * Guard para rutas de admin.
+ * Espera a que Firebase Auth termine de cargar antes de decidir.
+ */
+export const adminGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isLoading()) {
-    return true;
-  }
+  // Esperar a que Firebase Auth termine de restaurar la sesión
+  await waitForAuth(auth);
 
   if (auth.isAdmin()) {
     return true;
@@ -22,3 +25,20 @@ export const adminGuard: CanActivateFn = () => {
 
   return false;
 };
+
+function waitForAuth(auth: AuthService): Promise<void> {
+  return new Promise((resolve) => {
+    if (!auth.isLoading()) {
+      resolve();
+      return;
+    }
+    // Revisar cada 50ms hasta que termine de cargar (máx 5 seg)
+    const interval = setInterval(() => {
+      if (!auth.isLoading()) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 50);
+    setTimeout(() => { clearInterval(interval); resolve(); }, 5000);
+  });
+}

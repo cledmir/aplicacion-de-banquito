@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -106,7 +106,7 @@ import { UserRole } from '../../../core/enums';
   `,
   styleUrls: ['./login.component.scss'],
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   email = '';
   password = '';
   showPassword = signal(false);
@@ -117,6 +117,34 @@ export class LoginComponent {
     private readonly auth: AuthService,
     private readonly router: Router,
   ) {}
+
+  async ngOnInit(): Promise<void> {
+    // Esperar a que Firebase Auth restaure la sesión
+    await this.waitForAuth();
+
+    // Si ya está autenticado, redirigir al dashboard correcto
+    if (this.auth.isAdmin()) {
+      this.router.navigate(['/admin/dashboard'], { replaceUrl: true });
+    } else if (this.auth.isAuthenticated()) {
+      this.router.navigate(['/participant/dashboard'], { replaceUrl: true });
+    }
+  }
+
+  private waitForAuth(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.auth.isLoading()) {
+        resolve();
+        return;
+      }
+      const interval = setInterval(() => {
+        if (!this.auth.isLoading()) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 50);
+      setTimeout(() => { clearInterval(interval); resolve(); }, 5000);
+    });
+  }
 
   async onLogin(): Promise<void> {
     if (!this.email || !this.password) {
