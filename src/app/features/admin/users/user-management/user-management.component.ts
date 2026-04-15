@@ -173,6 +173,7 @@ interface UserDisplay {
                               class="action-icon-btn">
                         <mat-icon>edit</mat-icon>
                       </button>
+                      
                       @if (auth.isPrincipalAdmin()) {
                         <button mat-icon-button (click)="toggleRole(user)"
                                 [title]="user.role === 'admin' ? 'Quitar Admin' : 'Hacer Admin'"
@@ -180,12 +181,12 @@ interface UserDisplay {
                           <mat-icon>{{ user.role === 'admin' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
                         </button>
                       }
-                        <button mat-icon-button (click)="confirmDeleteUser(user)"
-                                title="Eliminar usuario"
-                                class="action-icon-btn delete-btn">
-                          <mat-icon>delete</mat-icon>
-                        </button>
-                      }
+
+                      <button mat-icon-button (click)="confirmDeleteUser(user)"
+                              title="Eliminar usuario"
+                              class="action-icon-btn delete-btn">
+                        <mat-icon>delete</mat-icon>
+                      </button>
                       
                       @if (!isPlaceholder(user.email)) {
                         <button mat-icon-button (click)="resetUserPassword(user)"
