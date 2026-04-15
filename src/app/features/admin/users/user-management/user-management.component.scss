@@ -84,7 +84,7 @@
 
 .user-row {
   display: grid;
-  grid-template-columns: 2fr 2fr 1fr 100px;
+  grid-template-columns: 2fr 2fr 1fr 160px;
   padding: $spacing-sm 0;
   border-bottom: 1px solid $glass-border;
   align-items: center;
@@ -152,6 +152,18 @@
 
   &.warn {
     color: $color-warning-light;
+  }
+
+  &.delete-btn {
+    color: $color-error-light;
+    opacity: 0.7;
+    &:hover { opacity: 1; }
+  }
+
+  &.reset-btn {
+    color: $color-success-light;
+    opacity: 0.7;
+    &:hover { opacity: 1; }
   }
 }
 

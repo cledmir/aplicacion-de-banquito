@@ -5,6 +5,10 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  sendPasswordResetEmail,
   Unsubscribe,
 } from 'firebase/auth';
 import { FirebaseService } from './firebase.service';
@@ -190,6 +194,35 @@ export class AuthService implements OnDestroy {
       this.firebase.where('role', '==', UserRole.ADMIN),
     );
     return admins.length > 0;
+  }
+
+  /**
+   * Cambia la contraseña del usuario actualmente logueado.
+   * Requiere la contraseña actual para re-autenticarse.
+   */
+  async changeOwnPassword(currentPassword: string, newPassword: string): Promise<void> {
+    const firebaseUser = this.firebase.auth.currentUser;
+    if (!firebaseUser || !firebaseUser.email) {
+      throw new Error('No hay usuario autenticado.');
+    }
+
+    // Re-autenticar con la contraseña actual
+    const credential = EmailAuthProvider.credential(firebaseUser.email, currentPassword);
+    await reauthenticateWithCredential(firebaseUser, credential);
+
+    // Cambiar la contraseña
+    await updatePassword(firebaseUser, newPassword);
+  }
+
+  /**
+   * Envía un correo de reseteo de contraseña.
+   * Solo funciona si el usuario tiene un email real (no placeholder).
+   */
+  async resetUserPassword(email: string): Promise<void> {
+    if (AuthService.isPlaceholderEmail(email)) {
+      throw new Error('Este usuario no tiene un correo real. Asigna un correo primero.');
+    }
+    await sendPasswordResetEmail(this.firebase.auth, email);
   }
 
   /**

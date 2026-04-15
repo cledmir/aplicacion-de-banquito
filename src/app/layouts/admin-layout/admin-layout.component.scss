@@ -172,7 +172,7 @@
   transition: margin-left $transition-base;
   min-height: 100vh;
 
-  .sidebar.collapsed ~ & {
+  .sidebar.collapsed~& {
     margin-left: $sidebar-collapsed-width;
   }
 }

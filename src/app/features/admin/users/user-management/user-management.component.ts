@@ -180,6 +180,20 @@ interface UserDisplay {
                           <mat-icon>{{ user.role === 'admin' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
                         </button>
                       }
+                        <button mat-icon-button (click)="confirmDeleteUser(user)"
+                                title="Eliminar usuario"
+                                class="action-icon-btn delete-btn">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      }
+                      
+                      @if (!isPlaceholder(user.email)) {
+                        <button mat-icon-button (click)="resetUserPassword(user)"
+                                title="Enviar correo para resetear contraseña"
+                                class="action-icon-btn reset-btn">
+                          <mat-icon>email</mat-icon>
+                        </button>
+                      }
                     }
                   </span>
                 </div>
@@ -356,6 +370,37 @@ export class UserManagementComponent implements OnInit {
     } catch (error) {
       console.error('Error toggling role:', error);
       this.snackBar.open('Error al cambiar el rol. Verifica tu conexión.', 'OK', { duration: 3000 });
+    }
+  }
+
+  async confirmDeleteUser(user: UserDisplay): Promise<void> {
+    const confirmed = window.confirm(
+      `¿Eliminar al usuario "${user.displayName}"?\n\nSe borrará su cuenta de la aplicación. Esta acción no se puede deshacer.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await this.firebase.deleteDocument('users', user.uid);
+      this.snackBar.open(`Usuario "${user.displayName}" eliminado.`, 'OK', { duration: 3000 });
+      await this.loadUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      this.snackBar.open('Error al eliminar el usuario.', 'OK', { duration: 3000 });
+    }
+  }
+
+  async resetUserPassword(user: UserDisplay): Promise<void> {
+    const confirmed = window.confirm(
+      `¿Enviar un correo de restablecimiento de contraseña a "${user.email}"?`
+    );
+    if (!confirmed) return;
+
+    try {
+      await this.auth.resetUserPassword(user.email);
+      this.snackBar.open(`Correo de restablecimiento enviado a ${user.email}.`, 'OK', { duration: 4000 });
+    } catch (error) {
+      console.error('Error enviando reset:', error);
+      this.snackBar.open('Error al enviar el correo. Inténtalo de nuevo.', 'OK', { duration: 4000 });
     }
   }
 }
