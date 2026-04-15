@@ -84,15 +84,11 @@
 
 .user-row {
   display: grid;
-  grid-template-columns: 2fr 2fr 1fr;
+  grid-template-columns: 2fr 2fr 1fr 100px;
   padding: $spacing-sm 0;
   border-bottom: 1px solid $glass-border;
   align-items: center;
   font-size: $font-size-sm;
-
-  &.has-actions {
-    grid-template-columns: 2fr 1.5fr 1fr 140px;
-  }
 
   &.header {
     font-weight: $font-weight-semibold;
@@ -103,7 +99,60 @@
     padding-bottom: $spacing-md;
   }
 
+  &.editing {
+    background: rgba($color-primary, 0.04);
+    border-radius: $radius-md;
+    padding: $spacing-sm;
+  }
+
   &:last-child { border-bottom: none; }
+}
+
+.edit-field {
+  padding-right: $spacing-sm;
+}
+
+.inline-input {
+  width: 100%;
+  background: rgba(white, 0.06);
+  border: 1px solid $glass-border;
+  border-radius: $radius-sm;
+  padding: 6px 10px;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: $color-primary-light;
+  }
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+}
+
+.no-email {
+  color: $color-text-muted;
+  font-style: italic;
+  font-size: $font-size-xs;
+}
+
+.action-icon-btn {
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.warn {
+    color: $color-warning-light;
+  }
 }
 
 .user-name-cell {

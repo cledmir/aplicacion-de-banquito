@@ -58,9 +58,10 @@ interface UserDisplay {
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Correo electrónico</mat-label>
+            <mat-label>Correo electrónico (opcional)</mat-label>
             <input matInput type="email" [(ngModel)]="newEmail" name="email" id="user-email" />
             <mat-icon matPrefix>email</mat-icon>
+            <mat-hint>Déjalo vacío para agregarlo después</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -111,46 +112,78 @@ interface UserDisplay {
 
         @if (users().length > 0) {
           <div class="users-table">
-            <div class="user-row header" [class.has-actions]="auth.isPrincipalAdmin()">
+            <div class="user-row header">
               <span>Nombre</span>
               <span>Email</span>
               <span>Rol</span>
-              @if (auth.isPrincipalAdmin()) {
-                <span>Acciones</span>
-              }
+              <span>Acciones</span>
             </div>
             @for (user of users(); track user.uid) {
-              <div class="user-row" [class.has-actions]="auth.isPrincipalAdmin()">
-                <span class="user-name-cell">
-                  <span class="user-avatar-small">{{ getInitials(user.displayName) }}</span>
-                  {{ user.displayName }}
-                </span>
-                <span class="user-email">{{ user.email }}</span>
-                <span class="role-cell">
-                  <span class="role-badge" [class]="user.role">
-                    {{ user.role === 'admin' ? 'Administrador' : 'Participante' }}
+              @if (editingUid === user.uid) {
+                <!-- Modo Edición -->
+                <div class="user-row editing">
+                  <span class="edit-field">
+                    <input class="inline-input" [(ngModel)]="editName"
+                           placeholder="Nombre" />
                   </span>
-                  @if (user.isPrincipalAdmin) {
-                    <span class="principal-badge" title="Administrador Principal">👑</span>
-                  }
-                </span>
-                
-                @if (auth.isPrincipalAdmin()) {
+                  <span class="edit-field">
+                    <input class="inline-input" [(ngModel)]="editEmail"
+                           placeholder="Correo (opcional)" />
+                  </span>
+                  <span class="role-cell">
+                    <span class="role-badge" [class]="user.role">
+                      {{ user.role === 'admin' ? 'Admin' : 'Participante' }}
+                    </span>
+                  </span>
                   <span class="action-cell">
-                    @if (!user.isPrincipalAdmin) {
-                      <button mat-stroked-button class="role-toggle-btn"
-                              (click)="toggleRole(user)"
-                              [color]="user.role === 'admin' ? 'warn' : 'primary'">
-                        @if (user.role === 'admin') {
-                          <mat-icon>arrow_downward</mat-icon> Quitar Admin
-                        } @else {
-                          <mat-icon>arrow_upward</mat-icon> Hacer Admin
-                        }
-                      </button>
+                    <button mat-icon-button color="primary" (click)="saveEdit(user)"
+                            title="Guardar">
+                      <mat-icon>check</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="cancelEdit()" title="Cancelar">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </span>
+                </div>
+              } @else {
+                <!-- Modo Vista -->
+                <div class="user-row">
+                  <span class="user-name-cell">
+                    <span class="user-avatar-small">{{ getInitials(user.displayName) }}</span>
+                    {{ user.displayName }}
+                  </span>
+                  <span class="user-email">
+                    @if (isPlaceholder(user.email)) {
+                      <span class="no-email">(Sin correo)</span>
+                    } @else {
+                      {{ user.email }}
                     }
                   </span>
-                }
-              </div>
+                  <span class="role-cell">
+                    <span class="role-badge" [class]="user.role">
+                      {{ user.role === 'admin' ? 'Administrador' : 'Participante' }}
+                    </span>
+                    @if (user.isPrincipalAdmin) {
+                      <span class="principal-badge" title="Administrador Principal">👑</span>
+                    }
+                  </span>
+                  <span class="action-cell">
+                    @if (!user.isPrincipalAdmin) {
+                      <button mat-icon-button (click)="startEdit(user)" title="Editar"
+                              class="action-icon-btn">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      @if (auth.isPrincipalAdmin()) {
+                        <button mat-icon-button (click)="toggleRole(user)"
+                                [title]="user.role === 'admin' ? 'Quitar Admin' : 'Hacer Admin'"
+                                class="action-icon-btn" [class.warn]="user.role === 'admin'">
+                          <mat-icon>{{ user.role === 'admin' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
+                        </button>
+                      }
+                    }
+                  </span>
+                </div>
+              }
             }
           </div>
         } @else {
@@ -170,6 +203,11 @@ export class UserManagementComponent implements OnInit {
   newName = '';
   newEmail = '';
   newPassword = '';
+
+  // Edit state
+  editingUid: string | null = null;
+  editName = '';
+  editEmail = '';
 
   constructor(
     public readonly auth: AuthService,
@@ -202,12 +240,12 @@ export class UserManagementComponent implements OnInit {
     this.errorMessage.set('');
     this.successMessage.set('');
 
-    if (!this.newName.trim() || !this.newEmail.trim() || !this.newPassword) {
-      this.errorMessage.set('Completa todos los campos.');
+    if (!this.newName.trim()) {
+      this.errorMessage.set('El nombre es obligatorio.');
       return;
     }
 
-    if (this.newPassword.length < 6) {
+    if (!this.newPassword || this.newPassword.length < 6) {
       this.errorMessage.set('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
@@ -227,8 +265,6 @@ export class UserManagementComponent implements OnInit {
       this.newEmail = '';
       this.newPassword = '';
 
-      // Note: registerUser creates a new Firebase Auth user which
-      // will sign out the current admin. Warn user to re-login.
       this.snackBar.open(
         'Cuenta creada. Debes volver a iniciar sesión.',
         'OK',
@@ -248,15 +284,67 @@ export class UserManagementComponent implements OnInit {
     }
   }
 
+  // ===== Edición Inline =====
+
+  startEdit(user: UserDisplay): void {
+    this.editingUid = user.uid;
+    this.editName = user.displayName;
+    this.editEmail = this.isPlaceholder(user.email) ? '' : user.email;
+  }
+
+  cancelEdit(): void {
+    this.editingUid = null;
+    this.editName = '';
+    this.editEmail = '';
+  }
+
+  async saveEdit(user: UserDisplay): Promise<void> {
+    if (!this.editName.trim()) {
+      this.snackBar.open('El nombre no puede estar vacío.', 'OK', { duration: 3000 });
+      return;
+    }
+
+    try {
+      const updateData: { displayName?: string; email?: string } = {};
+
+      if (this.editName.trim() !== user.displayName) {
+        updateData.displayName = this.editName.trim();
+      }
+
+      // Si el usuario puso un correo nuevo (o cambió el existente)
+      const newEmail = this.editEmail.trim();
+      if (newEmail && newEmail !== user.email) {
+        updateData.email = newEmail;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await this.auth.updateUserProfile(user.uid, updateData);
+        this.snackBar.open('Datos actualizados correctamente.', 'OK', { duration: 3000 });
+        await this.loadUsers();
+      }
+
+      this.cancelEdit();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      this.snackBar.open('Error al guardar los cambios.', 'OK', { duration: 3000 });
+    }
+  }
+
+  // ===== Helpers =====
+
+  isPlaceholder(email: string): boolean {
+    return AuthService.isPlaceholderEmail(email);
+  }
+
   getInitials(name: string): string {
     return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   }
 
   async toggleRole(user: UserDisplay): Promise<void> {
-    if (user.isPrincipalAdmin) return; // Fail-safe
-    
+    if (user.isPrincipalAdmin) return;
+
     const newRole = user.role === UserRole.ADMIN ? UserRole.PARTICIPANT : UserRole.ADMIN;
-    
+
     try {
       await this.auth.updateUserRole(user.uid, newRole);
       this.snackBar.open(

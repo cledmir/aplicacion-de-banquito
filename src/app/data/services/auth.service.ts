@@ -84,9 +84,24 @@ export class AuthService implements OnDestroy {
   }
 
   /**
+   * Genera un email placeholder para cuentas sin correo real.
+   */
+  private generatePlaceholderEmail(): string {
+    const id = Math.random().toString(36).substring(2, 8);
+    return `user_${id}@banquito.local`;
+  }
+
+  /**
+   * Verifica si un email es un placeholder generado.
+   */
+  static isPlaceholderEmail(email: string): boolean {
+    return email.endsWith('@banquito.local');
+  }
+
+  /**
    * Registra un nuevo usuario (usado por el admin para crear cuentas).
+   * Si no se proporciona email, genera uno temporal.
    * Nota: Esto cerrará la sesión del admin temporalmente en el cliente.
-   * Para producción considerar usar Firebase Admin SDK con Cloud Functions.
    */
   async registerUser(
     email: string,
@@ -95,9 +110,11 @@ export class AuthService implements OnDestroy {
     role: UserRole,
     isPrincipalAdmin: boolean = false,
   ): Promise<User> {
+    const finalEmail = email.trim() || this.generatePlaceholderEmail();
+
     const credential = await createUserWithEmailAndPassword(
       this.firebase.auth,
-      email,
+      finalEmail,
       password,
     );
 
@@ -106,7 +123,7 @@ export class AuthService implements OnDestroy {
     const now = new Date();
     const user: User = {
       uid: credential.user.uid,
-      email,
+      email: finalEmail,
       displayName,
       role,
       isPrincipalAdmin,
@@ -114,7 +131,7 @@ export class AuthService implements OnDestroy {
     };
 
     await this.firebase.setDocument('users', credential.user.uid, {
-      email,
+      email: finalEmail,
       displayName,
       role,
       isPrincipalAdmin,
@@ -152,6 +169,16 @@ export class AuthService implements OnDestroy {
    */
   async updateUserRole(uid: string, newRole: UserRole): Promise<void> {
     await this.firebase.updateDocument('users', uid, { role: newRole });
+  }
+
+  /**
+   * Actualiza el perfil de un usuario en Firestore (nombre, email).
+   */
+  async updateUserProfile(uid: string, data: { displayName?: string; email?: string }): Promise<void> {
+    const updateData: Record<string, unknown> = {};
+    if (data.displayName !== undefined) updateData['displayName'] = data.displayName;
+    if (data.email !== undefined) updateData['email'] = data.email;
+    await this.firebase.updateDocument('users', uid, updateData);
   }
 
   /**

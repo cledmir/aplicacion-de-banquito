@@ -18,6 +18,7 @@ import {
   DocumentReference,
   CollectionReference,
   setDoc,
+  enableIndexedDbPersistence,
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -34,6 +35,7 @@ import { environment } from '../../../environments/environment';
 /**
  * Servicio base de Firebase. Inicializa la app y expone
  * las instancias de Auth y Firestore.
+ * Habilita persistencia offline para carga instantánea.
  */
 @Injectable({
   providedIn: 'root',
@@ -47,6 +49,15 @@ export class FirebaseService {
     this.app = initializeApp(environment.firebase);
     this.db = getFirestore(this.app);
     this.auth = getAuth(this.app);
+
+    // Habilitar caché offline para carga instantánea
+    enableIndexedDbPersistence(this.db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('Firestore persistence: múltiples pestañas abiertas.');
+      } else if (err.code === 'unimplemented') {
+        console.warn('Firestore persistence: navegador no compatible.');
+      }
+    });
   }
 
   // ===== Firestore Helpers =====

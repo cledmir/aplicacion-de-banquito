@@ -135,3 +135,11 @@
     }
   }
 }
+
+.delete-menu-item {
+  color: $color-error-light !important;
+
+  mat-icon {
+    color: $color-error-light !important;
+  }
+}

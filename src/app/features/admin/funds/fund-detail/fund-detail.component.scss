@@ -99,6 +99,12 @@
     border-color: rgba($color-error, 0.5);
     &:hover { background: rgba($color-error, 0.1); }
   }
+
+  .delete-fund-btn {
+    border-color: rgba($color-error, 0.4);
+    color: $color-error-light;
+    &:hover { background: rgba($color-error, 0.1); }
+  }
 }
 
 .locked-icon {

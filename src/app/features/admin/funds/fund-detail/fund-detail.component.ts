@@ -10,7 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { FundRepository, PeriodRepository, ParticipantRepository, LoanRepository } from '../../../../data/repositories';
+import { FundRepository, PeriodRepository, ParticipantRepository, LoanRepository, PaymentRepository } from '../../../../data/repositories';
 import { FundType, LoanStatus, FundStatus } from '../../../../core/enums';
 import type { Fund, Period, Participant, Loan } from '../../../../core/models';
 
@@ -146,6 +146,11 @@ interface ParticipantLoanStatus {
               Finalizar Fondo
             </button>
           }
+          <button mat-stroked-button class="delete-fund-btn"
+                  (click)="confirmDeleteFund()">
+            <mat-icon>delete_forever</mat-icon>
+            Eliminar
+          </button>
         </div>
 
         <!-- Participants with Loan Status -->
@@ -318,6 +323,7 @@ export class FundDetailComponent implements OnInit {
     private readonly periodRepo: PeriodRepository,
     private readonly participantRepo: ParticipantRepository,
     private readonly loanRepo: LoanRepository,
+    private readonly paymentRepo: PaymentRepository,
     private readonly snackBar: MatSnackBar,
   ) {}
 
@@ -481,6 +487,45 @@ export class FundDetailComponent implements OnInit {
     } catch (error) {
       console.error('Error closing fund:', error);
       this.snackBar.open('Error al cerrar el fondo.', 'OK', { duration: 3000 });
+    }
+  }
+
+  // ===== Delete Fund =====
+  confirmDeleteFund(): void {
+    const fund = this.fund();
+    if (!fund) return;
+
+    const confirm1 = window.confirm(
+      `¿Estás seguro de eliminar el fondo "${fund.name}"?\n\nEsta acción eliminará TODOS los datos asociados de forma permanente.`
+    );
+    if (!confirm1) return;
+
+    const confirm2 = window.confirm(
+      `Última confirmación: Se borrará "${fund.name}" y toda su información. ¿Continuar?`
+    );
+    if (!confirm2) return;
+
+    this.deleteFund();
+  }
+
+  async deleteFund(): Promise<void> {
+    try {
+      const [participants, loans, payments] = await Promise.all([
+        this.participantRepo.getByFund(this.fundId),
+        this.loanRepo.getByFund(this.fundId),
+        this.paymentRepo.getByFund(this.fundId),
+      ]);
+
+      await Promise.all(payments.map(p => this.paymentRepo.delete(p.id)));
+      await Promise.all(loans.map(l => this.loanRepo.delete(l.id)));
+      await Promise.all(participants.map(p => this.participantRepo.delete(p.id)));
+      await this.fundRepo.delete(this.fundId);
+
+      this.snackBar.open('Fondo eliminado correctamente.', 'OK', { duration: 4000 });
+      this.router.navigate(['/admin/funds']);
+    } catch (error) {
+      console.error('Error deleting fund:', error);
+      this.snackBar.open('Error al eliminar el fondo.', 'OK', { duration: 4000 });
     }
   }
 }

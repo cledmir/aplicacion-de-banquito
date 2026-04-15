@@ -4,7 +4,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
-import { FundRepository } from '../../../../data/repositories';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { FundRepository, ParticipantRepository, LoanRepository, PaymentRepository } from '../../../../data/repositories';
 import { FundType, FundStatus } from '../../../../core/enums';
 import type { Fund } from '../../../../core/models';
 
@@ -17,6 +18,7 @@ import type { Fund } from '../../../../core/models';
     MatIconModule,
     MatChipsModule,
     MatMenuModule,
+    MatSnackBarModule,
   ],
   template: `
     <div class="page animate-fade-in">
@@ -110,6 +112,10 @@ import type { Fund } from '../../../../core/models';
                     <mat-icon>casino</mat-icon>
                     <span>Sorteo</span>
                   </button>
+                  <button mat-menu-item class="delete-menu-item" (click)="confirmDeleteFund(fund)">
+                    <mat-icon>delete_forever</mat-icon>
+                    <span>Eliminar Fondo</span>
+                  </button>
                 </mat-menu>
               </div>
             </div>
@@ -126,7 +132,11 @@ export class FundListComponent implements OnInit {
 
   constructor(
     private readonly fundRepo: FundRepository,
+    private readonly participantRepo: ParticipantRepository,
+    private readonly loanRepo: LoanRepository,
+    private readonly paymentRepo: PaymentRepository,
     private readonly router: Router,
+    private readonly snackBar: MatSnackBar,
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -163,5 +173,41 @@ export class FundListComponent implements OnInit {
 
   goToLottery(id: string): void {
     this.router.navigate(['/admin/funds', id, 'lottery']);
+  }
+
+  async confirmDeleteFund(fund: Fund): Promise<void> {
+    const confirm1 = window.confirm(
+      `¿Estás seguro de eliminar el fondo "${fund.name}"?\n\nEsta acción eliminará TODOS los datos asociados: participantes, préstamos, pagos y sorteos.`
+    );
+    if (!confirm1) return;
+
+    const confirm2 = window.confirm(
+      `Última confirmación: Se borrará "${fund.name}" y toda su información de forma PERMANENTE. ¿Continuar?`
+    );
+    if (!confirm2) return;
+
+    try {
+      // Eliminar en cascada: pagos → préstamos → participantes → fondo
+      const [participants, loans, payments] = await Promise.all([
+        this.participantRepo.getByFund(fund.id),
+        this.loanRepo.getByFund(fund.id),
+        this.paymentRepo.getByFund(fund.id),
+      ]);
+
+      // Borrar pagos
+      await Promise.all(payments.map(p => this.paymentRepo.delete(p.id)));
+      // Borrar préstamos
+      await Promise.all(loans.map(l => this.loanRepo.delete(l.id)));
+      // Borrar participantes
+      await Promise.all(participants.map(p => this.participantRepo.delete(p.id)));
+      // Borrar el fondo
+      await this.fundRepo.delete(fund.id);
+
+      this.snackBar.open(`Fondo "${fund.name}" eliminado correctamente.`, 'OK', { duration: 4000 });
+      await this.loadFunds();
+    } catch (error) {
+      console.error('Error deleting fund:', error);
+      this.snackBar.open('Error al eliminar el fondo. Inténtalo de nuevo.', 'OK', { duration: 4000 });
+    }
   }
 }
