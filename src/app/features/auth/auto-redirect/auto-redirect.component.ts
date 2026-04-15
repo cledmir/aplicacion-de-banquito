@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from '../../data/services';
+import { AuthService } from '../../../data/services';
 
 /**
  * Componente de redirección inteligente.
