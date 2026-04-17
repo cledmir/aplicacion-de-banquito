@@ -54,8 +54,9 @@ interface FundSummary {
         <div class="kpi-card blue">
           <mat-icon>account_balance</mat-icon>
           <div class="kpi-info">
+            <!-- Representa su patrimonio en tiempo real -->
             <span class="kpi-value">S/ {{ totalProjected().toFixed(2) }}</span>
-            <span class="kpi-label">Retorno Proyectado</span>
+            <span class="kpi-label">Tu Saldo a Favor</span>
           </div>
         </div>
         <div class="kpi-card purple">
@@ -111,7 +112,7 @@ interface FundSummary {
               <span class="pb-value">S/ {{ (totalContributed() + totalInterest() - totalDebt()).toFixed(2) }}</span>
             </div>
             <div class="profit-row total highlight">
-              <span class="pb-label">Monto Bruto a Recibir al Final 🏆</span>
+              <span class="pb-label">Aporte Final + Ganancias 🏆</span>
               <span class="pb-value total">S/ {{ (totalProjectedContribution() + totalNetProfit()).toFixed(2) }}</span>
             </div>
           </div>
@@ -159,7 +160,7 @@ interface FundSummary {
               </div>
             }
             <div class="mini-stat highlight">
-              <span class="mini-label">Retorno estimado</span>
+              <span class="mini-label">Tu Dinero a la Fecha</span>
               <span class="mini-value">S/ {{ fs.projectedReturn.toFixed(2) }}</span>
             </div>
           </div>
@@ -281,8 +282,12 @@ export class MyDashboardComponent implements OnInit {
           return sum + remaining;
         }, 0);
 
-        const projectedTotalContribution = monthly * (period ? period.months.length : 1);
-        const projectedReturn = contributed + interestShare - debt;
+        // En el último mes no se cobra la mensualidad de aporte
+        const monthsCount = period ? Math.max(1, period.months.length - 1) : 1;
+        const projectedTotalContribution = monthly * monthsCount;
+        
+        // Lo acumulado AL MOMENTO (aportes pagados + ganancia real generada - deuda deudas descontadas)
+        const currentBalance = contributed + interestShare - debt;
 
         summaries.push({
           fund,
@@ -298,7 +303,7 @@ export class MyDashboardComponent implements OnInit {
           interestPaid,
           interestPerOption,
           netInterestProfit,
-          projectedReturn,
+          projectedReturn: currentBalance,
         });
 
         totalContributed += contributed;

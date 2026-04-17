@@ -1,6 +1,8 @@
 import { Component, signal, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../../data/services';
 import { FundRepository, ParticipantRepository, PaymentRepository } from '../../../data/repositories';
 import { PaymentType } from '../../../core/enums';
@@ -13,10 +15,15 @@ interface PaymentWithFund extends Payment {
 @Component({
   selector: 'bf-my-payments',
   standalone: true,
-  imports: [DatePipe, MatIconModule],
+  imports: [RouterLink, DatePipe, MatIconModule, MatButtonModule],
   template: `
     <div class="page animate-fade-in">
-      <h1 class="page-title">Mis Pagos</h1>
+      <div class="page-header">
+        <h1 class="page-title">Mis Pagos</h1>
+        <a mat-button routerLink="/participant/dashboard">
+          <mat-icon>arrow_back</mat-icon> Volver al inicio
+        </a>
+      </div>
 
       <!-- Summary -->
       <div class="summary-bar">

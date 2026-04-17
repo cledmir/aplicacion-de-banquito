@@ -242,9 +242,14 @@ export class MonthlyCollectionComponent implements OnInit {
       ]);
 
       const fund = this.fund()!;
+      const period = this.period()!;
+      const isLastMonth = this.selectedMonth === period.months[period.months.length - 1];
+
       const collectionRows: CollectionRow[] = participants.map((p) => {
         const options = this.getOptionsForMonth(p, this.selectedMonth);
-        const contributionDue = options * fund.optionValue;
+        
+        // En el último mes no se cobra la mensualidad (aporte)
+        const contributionDue = isLastMonth ? 0 : options * fund.optionValue;
 
         const activeLoan = loans.find(
           (l) => l.participantId === p.id &&
@@ -254,9 +259,10 @@ export class MonthlyCollectionComponent implements OnInit {
 
         const loanPaymentDue = activeLoan?.monthlyPayment ?? 0;
 
-        const contributionPaid = payments.some(
-          (pay) => pay.participantId === p.id && pay.type === PaymentType.CONTRIBUTION,
-        );
+        const contributionPaid = isLastMonth 
+          ? true // Automatically consider paid since it's 0
+          : payments.some((pay) => pay.participantId === p.id && pay.type === PaymentType.CONTRIBUTION);
+          
         const loanPaid = activeLoan
           ? payments.some(
               (pay) => pay.participantId === p.id && pay.type === PaymentType.LOAN_PAYMENT,
