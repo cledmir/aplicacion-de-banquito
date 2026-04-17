@@ -14,7 +14,6 @@ import {
   PeriodRepository 
 } from '../../../data/repositories';
 import { PaymentType, LoanStatus } from '../../../core/enums';
-import { PaymentType, LoanStatus } from '../../../core/enums';
 import type { Fund, Participant, Loan, Period } from '../../../core/models';
 import { DateUtils } from '../../../core/utils';
 
