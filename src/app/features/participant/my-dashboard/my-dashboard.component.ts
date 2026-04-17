@@ -56,7 +56,7 @@ interface FundSummary {
           <div class="kpi-info">
             <!-- Representa su patrimonio en tiempo real -->
             <span class="kpi-value">S/ {{ totalProjected().toFixed(2) }}</span>
-            <span class="kpi-label">Tu Saldo a Favor</span>
+            <span class="kpi-label">Tu Dinero a la Fecha</span>
           </div>
         </div>
         <div class="kpi-card purple">
@@ -100,17 +100,7 @@ interface FundSummary {
                 S/ {{ totalNetProfit().toFixed(2) }}
               </span>
             </div>
-            @if (totalActiveLoans() > 0) {
-              <div class="profit-row warn">
-                <span class="pb-label">Deuda actual en préstamos</span>
-                <span class="pb-value warn">- S/ {{ totalDebt().toFixed(2) }}</span>
-              </div>
-            }
             <div class="divider"></div>
-            <div class="profit-row total">
-              <span class="pb-label">Saldo a Favor Actual</span>
-              <span class="pb-value">S/ {{ (totalContributed() + totalInterest() - totalDebt()).toFixed(2) }}</span>
-            </div>
             <div class="profit-row total highlight">
               <span class="pb-label">Aporte Final + Ganancias 🏆</span>
               <span class="pb-value total">S/ {{ (totalProjectedContribution() + totalNetProfit()).toFixed(2) }}</span>
@@ -150,15 +140,15 @@ interface FundSummary {
               <span class="mini-value money">S/ {{ fs.totalContributed.toFixed(2) }}</span>
             </div>
             <div class="mini-stat">
-              <span class="mini-label">Ganancia interés</span>
+              <span class="mini-label">Ganancia Bruta</span>
               <span class="mini-value accent">S/ {{ fs.interestEarned.toFixed(2) }}</span>
             </div>
-            @if (fs.activeLoans > 0) {
-              <div class="mini-stat">
-                <span class="mini-label">Deuda activa</span>
-                <span class="mini-value warn">S/ {{ fs.totalLoanDebt.toFixed(2) }}</span>
-              </div>
-            }
+            <div class="mini-stat">
+              <span class="mini-label" [class.accent]="fs.netInterestProfit >= 0" [class.warn]="fs.netInterestProfit < 0">Utilidad Neta</span>
+              <span class="mini-value" [class.accent]="fs.netInterestProfit >= 0" [class.warn]="fs.netInterestProfit < 0">
+                S/ {{ fs.netInterestProfit.toFixed(2) }}
+              </span>
+            </div>
             <div class="mini-stat highlight">
               <span class="mini-label">Tu Dinero a la Fecha</span>
               <span class="mini-value">S/ {{ fs.projectedReturn.toFixed(2) }}</span>
@@ -286,8 +276,8 @@ export class MyDashboardComponent implements OnInit {
         const monthsCount = period ? Math.max(1, period.months.length - 1) : 1;
         const projectedTotalContribution = monthly * monthsCount;
         
-        // Lo acumulado AL MOMENTO (aportes pagados + ganancia real generada - deuda deudas descontadas)
-        const currentBalance = contributed + interestShare - debt;
+        // Lo acumulado AL MOMENTO (aportes pagados + ganancia neta generada, ignorando deudas de préstamos)
+        const currentBalance = contributed + netInterestProfit;
 
         summaries.push({
           fund,
