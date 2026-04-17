@@ -251,7 +251,9 @@ export class PeriodReportComponent implements OnInit {
         const contributions = monthPayments.filter((p) => p.type === PaymentType.CONTRIBUTION);
         const loanPayments = monthPayments.filter((p) => p.type === PaymentType.LOAN_PAYMENT);
 
-        const expectedContributions = participants.reduce((sum, p) => {
+        const isLastMonth = month === period.months[period.months.length - 1];
+        
+        const expectedContributions = isLastMonth ? 0 : participants.reduce((sum, p) => {
           const opts = p.optionsPerMonth[month] ?? Object.values(p.optionsPerMonth).pop() ?? 0;
           return sum + opts * fund.optionValue;
         }, 0);
@@ -304,7 +306,9 @@ export class PeriodReportComponent implements OnInit {
         const debt = activeLoans.reduce((sum, l) => {
           return sum + l.installments.filter((i) => !i.paid).length * l.monthlyPayment;
         }, 0);
-        const projectedTotalContribution = opts * fund.optionValue * period.months.length;
+        // En el último mes no se cobra mensualidad de aporte (Math.max para evitar meses en 0)
+        const monthsCount = Math.max(1, period.months.length - 1);
+        const projectedTotalContribution = opts * fund.optionValue * monthsCount;
         
         const interestPaid = pLoans.reduce((sum, l) => sum + l.interestGenerated, 0);
         const netInterestProfit = interestShare - interestPaid;
