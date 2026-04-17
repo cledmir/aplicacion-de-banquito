@@ -130,10 +130,10 @@ export class InterestCalculator {
   }
 
   /**
-   * Redondea al décimo superior (ceil).
-   * Ej: 135.31 → 135.40, 135.39 → 135.40
+   * Redondea a 1 decimal estándar.
+   * Ej: 308.44 → 308.40, 308.45 → 308.50
    */
   static roundUp(value: number): number {
-    return Math.ceil(value * 10) / 10;
+    return Math.round(value * 10) / 10;
   }
 }
