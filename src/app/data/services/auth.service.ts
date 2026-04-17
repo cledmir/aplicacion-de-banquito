@@ -11,6 +11,7 @@ import {
   sendPasswordResetEmail,
   Unsubscribe,
 } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { FirebaseService } from './firebase.service';
 import { User } from '../../core/models';
 import { UserRole } from '../../core/enums';
@@ -136,7 +137,8 @@ export class AuthService implements OnDestroy {
       createdAt: now,
     };
 
-    await this.firebase.setDocument('users', credential.user.uid, {
+    // Creamos el documento usando the secondaryDb, ya que está autenticada como el nuevo usuario
+    await setDoc(doc(this.firebase.secondaryDb, 'users', credential.user.uid), {
       email: finalEmail,
       displayName,
       role,

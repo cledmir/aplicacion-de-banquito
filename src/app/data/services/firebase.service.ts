@@ -46,6 +46,7 @@ export class FirebaseService {
   readonly db: Firestore;
   readonly auth: Auth;
   readonly secondaryAuth: Auth;
+  readonly secondaryDb: Firestore;
 
   constructor() {
     this.app = initializeApp(environment.firebase);
@@ -59,6 +60,7 @@ export class FirebaseService {
     this.secondaryApp = existingApps.find(a => a.name === secondaryAppName)
       ?? initializeApp(environment.firebase, secondaryAppName);
     this.secondaryAuth = getAuth(this.secondaryApp);
+    this.secondaryDb = getFirestore(this.secondaryApp);
 
     // Habilitar caché offline para carga instantánea
     enableIndexedDbPersistence(this.db).catch((err) => {
