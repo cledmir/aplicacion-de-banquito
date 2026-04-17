@@ -33,6 +33,7 @@ interface ParticipantReport {
   totalDebt: number;
   interestGenerated: number;
   interestPaid: number;
+  netInterestProfit: number;
   netPosition: number;
   projectedTotalContribution: number;
   projectedFinalReturn: number;
@@ -129,15 +130,13 @@ interface ParticipantReport {
 
       <!-- Participant Summary -->
       <div class="section-card">
-        <h3 class="section-title">👥 Resumen por Participante</h3>
+        <h3 class="section-title">👥 Resumen Financiero por Participante</h3>
         <div class="participant-report-table">
           <div class="pr-row header">
             <span>Participante</span>
             <span>Opc.</span>
             <span>Aportado</span>
-            <span>Int. ganado</span>
-            <span>Int. pagado</span>
-            <span>Deuda actual</span>
+            <span>Utilidad Neta</span>
             <span>Retorno Final 🏆</span>
           </div>
           @for (pr of participantReports(); track pr.participant.id) {
@@ -145,10 +144,31 @@ interface ParticipantReport {
               <span class="pr-name">{{ pr.participant.name }}</span>
               <span>{{ pr.options }}</span>
               <span class="money">S/ {{ pr.totalContributed.toFixed(2) }}</span>
+              <span class="accent" [class.warn]="pr.netInterestProfit < 0">S/ {{ pr.netInterestProfit.toFixed(2) }}</span>
+              <span class="net positive">S/ {{ pr.projectedFinalReturn.toFixed(2) }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Participant Loans Summary -->
+      <div class="section-card">
+        <h3 class="section-title">💸 Préstamos y Utilidad por Participante</h3>
+        <div class="loan-report-table">
+          <div class="lr-row header">
+            <span>Participante</span>
+            <span>Int. ganado</span>
+            <span>Int. pagado</span>
+            <span>Utilidad Neta</span>
+            <span>Deuda actual</span>
+          </div>
+          @for (pr of participantReports(); track pr.participant.id) {
+            <div class="lr-row">
+              <span class="pr-name">{{ pr.participant.name }}</span>
               <span class="accent">S/ {{ pr.interestGenerated.toFixed(2) }}</span>
               <span class="warn">S/ {{ pr.interestPaid.toFixed(2) }}</span>
-              <span class="warn">S/ {{ pr.totalDebt.toFixed(2) }}</span>
-              <span class="net positive">S/ {{ pr.projectedFinalReturn.toFixed(2) }}</span>
+              <span class="net" [class.positive]="pr.netInterestProfit >= 0" [class.negative]="pr.netInterestProfit < 0">S/ {{ pr.netInterestProfit.toFixed(2) }}</span>
+              <span class="warn" [class.no-debt]="pr.totalDebt === 0">S/ {{ pr.totalDebt.toFixed(2) }}</span>
             </div>
           }
         </div>
@@ -298,6 +318,7 @@ export class PeriodReportComponent implements OnInit {
           totalDebt: debt,
           interestGenerated: interestShare,
           interestPaid,
+          netInterestProfit,
           netPosition: totalContributed + interestShare - debt,
           projectedTotalContribution,
           projectedFinalReturn: projectedTotalContribution + netInterestProfit,
@@ -399,23 +420,33 @@ export class PeriodReportComponent implements OnInit {
     };
 
     const participantsTable = {
-      title: 'Desglose por Participante',
-      head: [['Participante', 'Opc.', 'Aportado', 'Int. Ganado', 'Int. Pagado', 'Aporte Total (Proy.)', 'Retorno Final']],
+      title: 'Desglose Financiero',
+      head: [['Participante', 'Opc.', 'Aportado', 'Utilidad Neta', 'Retorno Final']],
       body: this.participantReports().map((p) => [
         p.participant.name,
         p.options.toString(),
         `S/ ${p.totalContributed.toFixed(2)}`,
+        `S/ ${p.netInterestProfit.toFixed(2)}`,
+        `S/ ${p.projectedFinalReturn.toFixed(2)}`,
+      ]),
+    };
+
+    const loansTable = {
+      title: 'Préstamos y Utilidad por Participante',
+      head: [['Participante', 'Int. Ganado', 'Int. Pagado', 'Utilidad Neta', 'Deuda Actual']],
+      body: this.participantReports().map((p) => [
+        p.participant.name,
         `S/ ${p.interestGenerated.toFixed(2)}`,
         `S/ ${p.interestPaid.toFixed(2)}`,
-        `S/ ${p.projectedTotalContribution.toFixed(2)}`,
-        `S/ ${p.projectedFinalReturn.toFixed(2)}`,
+        `S/ ${p.netInterestProfit.toFixed(2)}`,
+        `S/ ${p.totalDebt.toFixed(2)}`,
       ]),
     };
 
     this.exportService.exportToPdf(
       title,
       subtitle,
-      [globalsTable, monthsTable, participantsTable],
+      [globalsTable, monthsTable, participantsTable, loansTable],
       `Reporte_PDF_${this.fund()!.name.replace(/\\s+/g, '_')}`
     );
   }

@@ -118,7 +118,7 @@
 
 .pr-row {
   display: grid;
-  grid-template-columns: 2fr 45px 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 45px 1fr 1fr 1fr;
   padding: $spacing-sm 0;
   border-bottom: 1px solid $glass-border;
   font-size: $font-size-sm;
@@ -143,6 +143,38 @@
     &.positive { color: $color-success-light; }
     &.negative { color: $color-error-light; }
   }
+}
+
+.loan-report-table { display: flex; flex-direction: column; }
+
+.lr-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  padding: $spacing-sm 0;
+  border-bottom: 1px solid $glass-border;
+  font-size: $font-size-sm;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &.header {
+    font-weight: $font-weight-semibold;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &:last-child { border-bottom: none; }
+  
+  .pr-name { font-weight: $font-weight-medium; color: $color-text-primary; }
+  .accent { color: $color-accent; }
+  .warn { color: $color-warning-light; }
+  .net {
+    font-weight: $font-weight-bold;
+    &.positive { color: $color-success-light; }
+    &.negative { color: $color-error-light; }
+  }
+  .no-debt { color: $color-text-muted; font-weight: normal; }
 }
 
 // ===== Loan Summary =====
