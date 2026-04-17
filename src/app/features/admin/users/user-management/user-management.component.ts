@@ -194,6 +194,12 @@ interface UserDisplay {
                                 class="action-icon-btn reset-btn">
                           <mat-icon>email</mat-icon>
                         </button>
+                      } @else {
+                        <button mat-icon-button (click)="openTransferModal(user)"
+                                title="Vincular a cuenta real"
+                                class="action-icon-btn transfer-btn">
+                          <mat-icon>swap_horiz</mat-icon>
+                        </button>
                       }
                     }
                   </span>
@@ -206,6 +212,45 @@ interface UserDisplay {
         }
       </div>
     </div>
+
+    <!-- Transfer Modal -->
+    @if (transferringUser()) {
+      <div class="modal-overlay" (click)="closeTransferModal()">
+        <div class="modal-card" (click)="$event.stopPropagation()">
+          <h3 class="modal-title">
+            <mat-icon>swap_horiz</mat-icon>
+            Vincular Historial
+          </h3>
+          
+          <div class="modal-body">
+            <p>Selecciona el usuario real (previamente creado con su correo) al cual deseas trasladar el historial de pagos y aportes de <strong>{{ transferringUser()?.displayName }}</strong>.</p>
+            <p class="warn-text"><strong>Importante:</strong> Esta acción eliminará la cuenta temporal actual.</p>
+          </div>
+
+          <div class="modal-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Usuario Destino</mat-label>
+              <mat-select [ngModel]="selectedTargetUid()" (ngModelChange)="selectedTargetUid.set($event)">
+                @for (target of availableTransferTargets(); track target.uid) {
+                  <mat-option [value]="target.uid">
+                    {{ target.displayName }} ({{ target.email }})
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <div class="modal-actions">
+              <button mat-stroked-button (click)="closeTransferModal()">Cancelar</button>
+              <button mat-flat-button color="primary" 
+                      (click)="executeTransfer()"
+                      [disabled]="!selectedTargetUid() || isTransferring()">
+                <mat-icon>done</mat-icon> Confirmar Traslado
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
   `,
   styleUrls: ['./user-management.component.scss'],
 })
@@ -226,6 +271,18 @@ export class UserManagementComponent implements OnInit {
   editingUid: string | null = null;
   editName = '';
   editEmail = '';
+
+  // Transfer state
+  transferringUser = signal<UserDisplay | null>(null);
+  selectedTargetUid = signal<string>('');
+  isTransferring = signal(false);
+
+  availableTransferTargets = computed(() => {
+    const current = this.transferringUser();
+    if (!current) return [];
+    // Suggest transferring only to real accounts (with real emails)
+    return this.users().filter(u => u.uid !== current.uid && !this.isPlaceholder(u.email));
+  });
 
   constructor(
     public readonly auth: AuthService,
@@ -383,6 +440,78 @@ export class UserManagementComponent implements OnInit {
     } catch (error) {
       console.error('Error enviando reset:', error);
       this.snackBar.open('Error al enviar el correo. Inténtalo de nuevo.', 'OK', { duration: 4000 });
+    }
+  }
+
+  // ===== Lógica de Transferencia de Historial (Identidad) =====
+
+  openTransferModal(user: UserDisplay): void {
+    this.transferringUser.set(user);
+    this.selectedTargetUid.set('');
+  }
+
+  closeTransferModal(): void {
+    this.transferringUser.set(null);
+    this.selectedTargetUid.set('');
+    this.isTransferring.set(false);
+  }
+
+  async executeTransfer(): Promise<void> {
+    const oldUser = this.transferringUser();
+    const newUid = this.selectedTargetUid();
+
+    if (!oldUser || !newUid) return;
+
+    const targetUser = this.availableTransferTargets().find(u => u.uid === newUid);
+    if (!targetUser) return;
+
+    const confirmed = window.confirm(
+      `¿Estás seguro de trasladar el historial de "${oldUser.displayName}" a "${targetUser.displayName}"?\n\nLa cuenta vieja será eliminada y esta acción es permanente.`
+    );
+    if (!confirmed) return;
+
+    this.isTransferring.set(true);
+
+    try {
+      // 1. Encontrar participaciones
+      const participants = await this.firebase.getDocuments('participants', this.firebase.where('userId', '==', oldUser.uid));
+      
+      for (const p of participants) {
+        const participantId = p['id'] as string;
+        
+        // A. Actualizar identity principal en la Participación
+        await this.firebase.updateDocument('participants', participantId, {
+          userId: targetUser.uid,
+          name: targetUser.displayName
+        });
+
+        // B. Buscar Préstamos atados a este Participante para actualizar el nombre (desnormalización)
+        const loans = await this.firebase.getDocuments('loans', this.firebase.where('participantId', '==', participantId));
+        for (const loan of loans) {
+          await this.firebase.updateDocument('loans', loan['id'] as string, {
+            participantName: targetUser.displayName
+          });
+        }
+
+        // C. Buscar Pagos atados a este Participante
+        const payments = await this.firebase.getDocuments('payments', this.firebase.where('participantId', '==', participantId));
+        for (const payment of payments) {
+          await this.firebase.updateDocument('payments', payment['id'] as string, {
+            participantName: targetUser.displayName
+          });
+        }
+      }
+
+      // 2. Eliminar al usuario temporal antiguo
+      await this.firebase.deleteDocument('users', oldUser.uid);
+
+      this.snackBar.open('¡Transferencia de historial exitosa!', 'OK', { duration: 4000 });
+      this.closeTransferModal();
+
+    } catch (error) {
+      console.error('Error durante la transferencia:', error);
+      this.snackBar.open('Error crítico al intentar migrar el historial.', 'OK', { duration: 4000 });
+      this.isTransferring.set(false);
     }
   }
 }
