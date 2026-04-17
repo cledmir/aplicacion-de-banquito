@@ -149,6 +149,13 @@ export const routes: Routes = [
             './features/participant/loan-simulator/loan-simulator.component'
           ).then((m) => m.LoanSimulatorComponent),
       },
+      {
+        path: 'obligations',
+        loadComponent: () =>
+          import(
+            './features/participant/my-obligations/my-obligations.component'
+          ).then((m) => m.MyObligationsComponent),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

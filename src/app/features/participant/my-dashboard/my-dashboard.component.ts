@@ -55,8 +55,8 @@ interface FundSummary {
           <mat-icon>account_balance</mat-icon>
           <div class="kpi-info">
             <!-- Representa su patrimonio en tiempo real -->
-            <span class="kpi-value">S/ {{ totalProjected().toFixed(2) }}</span>
-            <span class="kpi-label">Tu Dinero a la Fecha</span>
+            <span class="kpi-value" [class.warn]="totalNetProfit() < 0">S/ {{ totalNetProfit().toFixed(2) }}</span>
+            <span class="kpi-label">Utilidad Neta Global</span>
           </div>
         </div>
         <div class="kpi-card purple">
@@ -149,10 +149,7 @@ interface FundSummary {
                 S/ {{ fs.netInterestProfit.toFixed(2) }}
               </span>
             </div>
-            <div class="mini-stat highlight">
-              <span class="mini-label">Tu Dinero a la Fecha</span>
-              <span class="mini-value">S/ {{ fs.projectedReturn.toFixed(2) }}</span>
-            </div>
+
           </div>
         </div>
       }
@@ -179,6 +176,10 @@ interface FundSummary {
           <a mat-stroked-button routerLink="/participant/payments" class="action-btn">
             <mat-icon>receipt_long</mat-icon>
             Mis Pagos
+          </a>
+          <a mat-stroked-button color="accent" routerLink="/participant/obligations" class="action-btn">
+            <mat-icon>event_note</mat-icon>
+            Mis Cuotas Mensuales
           </a>
         </div>
       }
