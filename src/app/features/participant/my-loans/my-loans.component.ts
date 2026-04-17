@@ -1,4 +1,5 @@
 import { Component, signal, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,10 +15,15 @@ interface LoanWithFund extends Loan {
 @Component({
   selector: 'bf-my-loans',
   standalone: true,
-  imports: [DatePipe, MatIconModule, MatButtonModule],
+  imports: [RouterLink, DatePipe, MatIconModule, MatButtonModule],
   template: `
     <div class="page animate-fade-in">
-      <h1 class="page-title">Mis Préstamos</h1>
+      <div class="page-header">
+        <h1 class="page-title">Mis Préstamos</h1>
+        <a mat-button routerLink="/participant/dashboard">
+          <mat-icon>arrow_back</mat-icon> Volver al inicio
+        </a>
+      </div>
 
       @if (loans().length > 0) {
         @for (loan of loans(); track loan.id) {
