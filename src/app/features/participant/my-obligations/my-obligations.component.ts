@@ -238,7 +238,7 @@ export class MyObligationsComponent implements OnInit {
         let totalLoanDue = 0;
 
         for (const loan of loans) {
-          if (loan.status === LoanStatus.PAID_OFF || loan.status === LoanStatus.DEFAULTED) {
+          if (loan.status === LoanStatus.PAID) {
              // Let's also check if it has a paid installment in this month to show historically
              const inst = loan.installments.find(i => i.month === month);
              if (inst) {
