@@ -42,8 +42,14 @@ import type { Participant, Fund, Period, LoanCalculation } from '../../../../cor
         </a>
       </div>
 
-      <div class="form-container">
-        <!-- Available Balance Info -->
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando datos del fondo...</p>
+        </div>
+      } @else {
+        <div class="form-container">
+          <!-- Available Balance Info -->
         <div class="balance-info">
           <mat-icon>account_balance</mat-icon>
           <div class="balance-details">
@@ -173,6 +179,7 @@ import type { Participant, Fund, Period, LoanCalculation } from '../../../../cor
           </div>
         </form>
       </div>
+      }
     </div>
   `,
   styleUrls: ['./loan-create.component.scss'],
@@ -194,6 +201,7 @@ export class LoanCreateComponent implements OnInit {
   startMonth = '';
 
   isSaving = signal(false);
+  isLoading = signal(true);
   errorMessage = signal('');
 
   constructor(
@@ -213,6 +221,7 @@ export class LoanCreateComponent implements OnInit {
   }
 
   async loadData(): Promise<void> {
+    this.isLoading.set(true);
     try {
       const fund = await this.fundRepo.getById(this.fundId);
       this.fund.set(fund);
@@ -252,6 +261,8 @@ export class LoanCreateComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

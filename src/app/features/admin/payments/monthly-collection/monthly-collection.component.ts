@@ -7,6 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
   FundRepository,
   PeriodRepository,
@@ -41,6 +42,7 @@ interface CollectionRow {
     MatFormFieldModule,
     MatSnackBarModule,
     MatChipsModule,
+    MatProgressSpinnerModule,
   ],
   template: `
     <div class="page animate-fade-in">
@@ -57,7 +59,13 @@ interface CollectionRow {
         </a>
       </div>
 
-      <!-- Month Selector -->
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando recaudación de Firebase...</p>
+        </div>
+      } @else {
+        <!-- Month Selector -->
       <div class="month-selector">
         <mat-form-field appearance="outline">
           <mat-label>Mes de cobro</mat-label>
@@ -172,6 +180,7 @@ interface CollectionRow {
           <p>Agrega participantes al fondo primero</p>
         </div>
       }
+      }
     </div>
   `,
   styleUrls: ['./monthly-collection.component.scss'],
@@ -187,6 +196,7 @@ export class MonthlyCollectionComponent implements OnInit {
   totalCollected = signal(0);
   hasPendingPayments = signal(false);
   isProcessing = signal(false);
+  isLoading = signal(true);
   processedCount = signal(0);
   totalToProcess = signal(0);
 
@@ -208,6 +218,7 @@ export class MonthlyCollectionComponent implements OnInit {
   }
 
   async loadFundData(): Promise<void> {
+    this.isLoading.set(true);
     try {
       const fund = await this.fundRepo.getById(this.fundId);
       this.fund.set(fund);
@@ -230,6 +241,8 @@ export class MonthlyCollectionComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error loading fund:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
@@ -239,7 +252,7 @@ export class MonthlyCollectionComponent implements OnInit {
 
   async loadMonthData(): Promise<void> {
     if (!this.selectedMonth || !this.fund()) return;
-
+    this.isLoading.set(true);
     try {
       const [participants, loans, payments] = await Promise.all([
         this.participantRepo.getByFund(this.fundId),
@@ -307,6 +320,8 @@ export class MonthlyCollectionComponent implements OnInit {
       this.hasPendingPayments.set(hasPending);
     } catch (error) {
       console.error('Error loading month data:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

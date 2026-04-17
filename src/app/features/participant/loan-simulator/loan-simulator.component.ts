@@ -5,6 +5,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../data/services';
 import { FundRepository, ParticipantRepository, LoanRepository, PaymentRepository, PeriodRepository } from '../../../data/repositories';
 import { InterestCalculator, DateUtils } from '../../../core/utils';
@@ -27,6 +28,7 @@ interface SimulatorFund {
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
+    MatProgressSpinnerModule,
   ],
   template: `
     <div class="page animate-fade-in">
@@ -36,8 +38,14 @@ interface SimulatorFund {
       </h1>
       <p class="page-subtitle">Calcula cuánto pagarías antes de solicitar un préstamo</p>
 
-      <div class="simulator-container">
-        <!-- Config -->
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando tus fondos activos...</p>
+        </div>
+      } @else {
+        <div class="simulator-container">
+          <!-- Config -->
         <div class="sim-form">
           @if (availableFunds().length > 0) {
             <mat-form-field appearance="outline">
@@ -159,12 +167,14 @@ interface SimulatorFund {
             </div>
           </div>
         }
-      </div>
+        </div>
+      }
     </div>
   `,
   styleUrls: ['./loan-simulator.component.scss'],
 })
 export class LoanSimulatorComponent implements OnInit {
+  isLoading = signal(true);
   availableFunds = signal<SimulatorFund[]>([]);
   months = signal<string[]>([]);
   maxInstallments = signal(12);
@@ -200,6 +210,7 @@ export class LoanSimulatorComponent implements OnInit {
   }
 
   async loadFunds(): Promise<void> {
+    this.isLoading.set(true);
     try {
       const user = this.auth.user();
       if (!user) return;
@@ -236,6 +247,8 @@ export class LoanSimulatorComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error loading funds:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
