@@ -164,6 +164,65 @@
   }
 }
 
+// ===== Password Modal =====
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: $z-modal;
+  @include flex-center;
+}
+
+.modal-card {
+  @include card-base;
+  width: 100%;
+  max-width: 400px;
+  padding: $spacing-xl;
+  box-shadow: $shadow-xl;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-lg;
+
+  mat-icon { color: $color-primary-light; }
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+
+  mat-form-field { width: 100%; }
+}
+
+.modal-error {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  color: $color-error-light;
+  background: rgba($color-error, 0.1);
+  padding: $spacing-sm;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  margin-bottom: $spacing-md;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
 // ===== Main Content =====
 .main-content {
   flex: 1;
