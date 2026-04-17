@@ -66,7 +66,7 @@ interface UserDisplay {
 
           <mat-form-field appearance="outline">
             <mat-label>Contraseña</mat-label>
-            <input matInput type="text" [(ngModel)]="newPassword" name="password" id="user-password" />
+            <input matInput type="password" autocomplete="new-password" [(ngModel)]="newPassword" name="password" id="user-password" />
             <mat-icon matPrefix>lock</mat-icon>
           </mat-form-field>
 
