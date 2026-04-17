@@ -255,6 +255,7 @@ export class LoanCreateComponent implements OnInit {
   }
 
   recalculate(): void {
+    this.errorMessage.set('');
     const fund = this.fund();
     const period = this.period();
     if (!fund || !period || this.loanAmount <= 0 || this.installmentCount <= 0) {
@@ -289,6 +290,7 @@ export class LoanCreateComponent implements OnInit {
   }
 
   async onSubmit(): Promise<void> {
+    this.errorMessage.set('');
     const calc = this.calculation();
     if (!calc || !this.selectedParticipantId) {
       this.errorMessage.set('Completa todos los campos.');
