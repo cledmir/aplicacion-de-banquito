@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, inject } from '@angular/core';
+import { Component, signal, computed, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -462,7 +462,7 @@ export class UserManagementComponent implements OnInit {
 
     if (!oldUser || !newUid) return;
 
-    const targetUser = this.availableTransferTargets().find(u => u.uid === newUid);
+    const targetUser = this.availableTransferTargets().find((u: UserDisplay) => u.uid === newUid);
     if (!targetUser) return;
 
     const confirmed = window.confirm(
