@@ -262,7 +262,10 @@ export class LoanCreateComponent implements OnInit {
       return;
     }
 
-    if (this.loanAmount > this.availableBalance()) {
+    const roundedInput = Math.round(this.loanAmount * 100) / 100;
+    const roundedBalance = Math.round(this.availableBalance() * 100) / 100;
+
+    if (roundedInput > roundedBalance) {
       this.errorMessage.set(`El monto excede el fondo disponible (S/ ${this.availableBalance().toFixed(2)})`);
       this.calculation.set(null);
       return;
@@ -292,7 +295,10 @@ export class LoanCreateComponent implements OnInit {
       return;
     }
 
-    if (this.loanAmount > this.availableBalance()) {
+    const roundedInput = Math.round(this.loanAmount * 100) / 100;
+    const roundedBalance = Math.round(this.availableBalance() * 100) / 100;
+
+    if (roundedInput > roundedBalance) {
       this.errorMessage.set('El monto excede el fondo disponible.');
       return;
     }
