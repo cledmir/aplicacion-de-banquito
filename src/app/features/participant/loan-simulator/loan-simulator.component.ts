@@ -6,14 +6,15 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../data/services';
-import { FundRepository, ParticipantRepository, LoanRepository, PeriodRepository } from '../../../data/repositories';
-import { InterestCalculator } from '../../../core/utils';
+import { FundRepository, ParticipantRepository, LoanRepository, PaymentRepository, PeriodRepository } from '../../../data/repositories';
+import { InterestCalculator, DateUtils } from '../../../core/utils';
 import { FundType } from '../../../core/enums';
 import type { Fund, Period, LoanCalculation } from '../../../core/models';
 
 interface SimulatorFund {
   fund: Fund;
   period: Period;
+  availableBalance: number;
 }
 
 @Component({
@@ -180,6 +181,8 @@ export class LoanSimulatorComponent implements OnInit {
     private readonly fundRepo: FundRepository,
     private readonly participantRepo: ParticipantRepository,
     private readonly periodRepo: PeriodRepository,
+    private readonly paymentRepo: PaymentRepository,
+    private readonly loanRepo: LoanRepository,
   ) {}
 
   currentRate(): string {
@@ -209,9 +212,20 @@ export class LoanSimulatorComponent implements OnInit {
         const me = participants.find((p) => p.userId === user.uid);
         if (!me) continue;
 
-        const period = await this.periodRepo.getById(fund.periodId);
+        const [period, payments, fundLoans] = await Promise.all([
+          this.periodRepo.getById(fund.periodId),
+          this.paymentRepo.getByFund(fund.id),
+          this.loanRepo.getByFund(fund.id)
+        ]);
+
         if (period) {
-          simFunds.push({ fund, period });
+          const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
+          const totalLoaned = fundLoans
+            .filter((l) => l.status === 'active')
+            .reduce((sum, l) => sum + l.amount, 0);
+          const balance = Math.max(0, totalCollected - totalLoaned);
+
+          simFunds.push({ fund, period, availableBalance: balance });
         }
       }
 
@@ -231,8 +245,14 @@ export class LoanSimulatorComponent implements OnInit {
 
     this.months.set(sf.period.months);
     this.maxInstallments.set(sf.period.months.length);
-    if (sf.period.months.length > 0 && !this.startMonth) {
-      this.startMonth = sf.period.months[0];
+    this.amount = sf.availableBalance;
+    if (sf.period.months.length > 0) {
+      const smartMonth = DateUtils.getSmartCurrentMonth();
+      if (sf.period.months.includes(smartMonth)) {
+        this.startMonth = smartMonth;
+      } else {
+        this.startMonth = sf.period.months[0];
+      }
     }
     this.simulate();
   }

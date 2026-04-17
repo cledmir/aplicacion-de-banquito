@@ -16,6 +16,7 @@ import {
 } from '../../../../data/repositories';
 import { PaymentType, LoanStatus, FundStatus, PaymentMethod } from '../../../../core/enums';
 import type { Fund, Period, Participant, Loan, Payment } from '../../../../core/models';
+import { DateUtils } from '../../../../core/utils';
 
 interface CollectionRow {
   participant: Participant;
@@ -217,7 +218,12 @@ export class MonthlyCollectionComponent implements OnInit {
         if (period) {
           this.months.set(period.months);
           if (period.months.length > 0) {
-            this.selectedMonth = period.months[0];
+            const smartMonth = DateUtils.getSmartCurrentMonth();
+            if (period.months.includes(smartMonth)) {
+              this.selectedMonth = smartMonth;
+            } else {
+              this.selectedMonth = period.months[0];
+            }
             await this.loadMonthData();
           }
         }

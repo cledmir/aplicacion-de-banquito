@@ -14,7 +14,9 @@ import {
   PeriodRepository 
 } from '../../../data/repositories';
 import { PaymentType, LoanStatus } from '../../../core/enums';
+import { PaymentType, LoanStatus } from '../../../core/enums';
 import type { Fund, Participant, Loan, Period } from '../../../core/models';
+import { DateUtils } from '../../../core/utils';
 
 interface ObligationLoan {
   loanId: string;
@@ -192,8 +194,12 @@ export class MyObligationsComponent implements OnInit {
       this.availableMonths.set(months);
 
       if (months.length > 0) {
-        // Default to the first available month (or a matching current month logic if we had one)
-        this.loadMonthData(months[0]);
+        const smartMonth = DateUtils.getSmartCurrentMonth();
+        if (months.includes(smartMonth)) {
+          this.loadMonthData(smartMonth);
+        } else {
+          this.loadMonthData(months[0]);
+        }
       }
     } catch (error) {
       console.error('Error initializing obligations view', error);

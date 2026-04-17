@@ -68,6 +68,21 @@ export class DateUtils {
   }
 
   /**
+   * Obtiene el mes con la Regla del Día 5:
+   * Si hoy es <= 5, devuelve el mes actual. Si es > 5, devuelve el próximo mes.
+   */
+  static getSmartCurrentMonth(): string {
+    const now = new Date();
+    if (now.getDate() <= 5) {
+      return this.getCurrentMonth();
+    } else {
+      const nextDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const nextMonthKey = this.MONTH_ORDER[nextDate.getMonth()];
+      return `${nextMonthKey}-${nextDate.getFullYear()}`;
+    }
+  }
+
+  /**
    * Obtiene el índice del mes siguiente al dado.
    */
   static getNextMonth(monthKey: string, availableMonths: string[]): string | null {

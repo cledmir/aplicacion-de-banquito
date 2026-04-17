@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoanRepository, ParticipantRepository, FundRepository, PeriodRepository, PaymentRepository } from '../../../../data/repositories';
-import { InterestCalculator } from '../../../../core/utils';
+import { InterestCalculator, DateUtils } from '../../../../core/utils';
 import { FundType } from '../../../../core/enums';
 import type { Participant, Fund, Period, LoanCalculation } from '../../../../core/models';
 
@@ -235,13 +235,18 @@ export class LoanCreateComponent implements OnInit {
           .reduce((sum, l) => sum + l.amount, 0);
         const balance = Math.max(0, totalCollected - totalLoaned);
         this.availableBalance.set(balance);
-        this.loanAmount = Math.min(500, balance);
+        this.loanAmount = balance;
 
         if (period) {
           this.availableMonths.set(period.months);
           this.maxInstallments.set(period.months.length);
           if (period.months.length > 0) {
-            this.startMonth = period.months[0];
+            const smartMonth = DateUtils.getSmartCurrentMonth();
+            if (period.months.includes(smartMonth)) {
+              this.startMonth = smartMonth;
+            } else {
+              this.startMonth = period.months[0];
+            }
           }
         }
       }
