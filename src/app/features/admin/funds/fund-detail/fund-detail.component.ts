@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, computed, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -304,6 +304,8 @@ export class FundDetailComponent implements OnInit {
   readonly FundStatus = FundStatus;
   fundId = '';
   
+  private readonly state = inject(StateService);
+
   // Real-time state
   fund = computed(() => this.state.funds().find(f => f.id === this.fundId) ?? null);
   participants = this.state.participants;
@@ -357,7 +359,6 @@ export class FundDetailComponent implements OnInit {
     private readonly participantRepo: ParticipantRepository,
     private readonly loanRepo: LoanRepository,
     private readonly paymentRepo: PaymentRepository,
-    private readonly state: StateService,
     private readonly snackBar: MatSnackBar,
   ) {}
 

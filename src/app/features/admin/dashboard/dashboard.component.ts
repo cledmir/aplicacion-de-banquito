@@ -1,4 +1,4 @@
-import { Component, signal, computed, OnInit } from '@angular/core';
+import { Component, signal, computed, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -128,6 +128,7 @@ import type { Loan, Payment } from '../../../core/models';
 })
 export class DashboardComponent implements OnInit {
   userName = signal('');
+  private readonly state = inject(StateService);
 
   // Computed desde StateService — se actualiza en tiempo real
   activeFunds = computed(() =>
@@ -141,7 +142,6 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private readonly auth: AuthService,
-    private readonly state: StateService,
     private readonly participantRepo: ParticipantRepository,
     private readonly loanRepo: LoanRepository,
     private readonly paymentRepo: PaymentRepository,

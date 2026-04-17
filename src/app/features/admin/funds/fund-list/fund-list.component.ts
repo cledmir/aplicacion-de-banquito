@@ -1,4 +1,4 @@
-import { Component, signal, computed, OnInit, effect } from '@angular/core';
+import { Component, signal, computed, OnInit, effect, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -128,12 +128,13 @@ import type { Fund } from '../../../../core/models';
   styleUrls: ['./fund-list.component.scss'],
 })
 export class FundListComponent implements OnInit {
+  private readonly state = inject(StateService);
+
   // En tiempo real desde StateService
   funds = this.state.funds;
   isLoading = signal(true);
 
   constructor(
-    private readonly state: StateService,
     private readonly fundRepo: FundRepository,
     private readonly participantRepo: ParticipantRepository,
     private readonly loanRepo: LoanRepository,

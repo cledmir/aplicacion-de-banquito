@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -210,6 +210,8 @@ interface UserDisplay {
   styleUrls: ['./user-management.component.scss'],
 })
 export class UserManagementComponent implements OnInit {
+  private readonly state = inject(StateService);
+
   // En tiempo real desde StateService
   users = this.state.users;
   isCreating = signal(false);
@@ -228,7 +230,6 @@ export class UserManagementComponent implements OnInit {
   constructor(
     public readonly auth: AuthService,
     private readonly firebase: FirebaseService,
-    private readonly state: StateService,
     private readonly snackBar: MatSnackBar,
   ) {}
 
