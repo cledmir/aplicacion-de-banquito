@@ -136,6 +136,7 @@ interface ParticipantReport {
             <span>Participante</span>
             <span>Opc.</span>
             <span>Aportado</span>
+            <span>Int. Ganado</span>
             <span>Utilidad Neta</span>
             <span>Retorno Final 🏆</span>
           </div>
@@ -144,6 +145,7 @@ interface ParticipantReport {
               <span class="pr-name">{{ pr.participant.name }}</span>
               <span>{{ pr.options }}</span>
               <span class="money">S/ {{ pr.totalContributed.toFixed(2) }}</span>
+              <span class="accent">S/ {{ pr.interestGenerated.toFixed(2) }}</span>
               <span class="accent" [class.warn]="pr.netInterestProfit < 0">S/ {{ pr.netInterestProfit.toFixed(2) }}</span>
               <span class="net positive">S/ {{ pr.projectedFinalReturn.toFixed(2) }}</span>
             </div>
@@ -425,11 +427,12 @@ export class PeriodReportComponent implements OnInit {
 
     const participantsTable = {
       title: 'Desglose Financiero',
-      head: [['Participante', 'Opc.', 'Aportado', 'Utilidad Neta', 'Retorno Final']],
+      head: [['Participante', 'Opc.', 'Aportado', 'Int. Ganado', 'Utilidad Neta', 'Retorno Final']],
       body: this.participantReports().map((p) => [
         p.participant.name,
         p.options.toString(),
         `S/ ${p.totalContributed.toFixed(2)}`,
+        `S/ ${p.interestGenerated.toFixed(2)}`,
         `S/ ${p.netInterestProfit.toFixed(2)}`,
         `S/ ${p.projectedFinalReturn.toFixed(2)}`,
       ]),
