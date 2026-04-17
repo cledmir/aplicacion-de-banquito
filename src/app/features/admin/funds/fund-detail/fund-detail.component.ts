@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FundRepository, PeriodRepository, ParticipantRepository, LoanRepository, PaymentRepository } from '../../../../data/repositories';
+import { StateService } from '../../../../data/services';
 import { FundType, LoanStatus, FundStatus } from '../../../../core/enums';
 import type { Fund, Period, Participant, Loan } from '../../../../core/models';
 
@@ -302,14 +303,46 @@ export class FundDetailComponent implements OnInit {
   readonly LoanStatus = LoanStatus;
   readonly FundStatus = FundStatus;
   fundId = '';
-  fund = signal<Fund | null>(null);
+  
+  // Real-time state
+  fund = computed(() => this.state.funds().find(f => f.id === this.fundId) ?? null);
+  participants = this.state.participants;
+  loans = this.state.loans;
+  
   period = signal<Period | null>(null);
-  participants = signal<Participant[]>([]);
-  loans = signal<Loan[]>([]);
-  participantStatuses = signal<ParticipantLoanStatus[]>([]);
   isLoading = signal(true);
-  totalOptions = signal(0);
-  interestPerOption = signal(0);
+
+  // Computed derivations
+  totalOptions = computed(() => {
+    return this.participants().reduce((sum, p) => {
+      const options = Object.values(p.optionsPerMonth);
+      return sum + (options.length > 0 ? options[options.length - 1] : 0);
+    }, 0);
+  });
+
+  participantStatuses = computed<ParticipantLoanStatus[]>(() => {
+    const ps = this.participants();
+    const ls = this.loans();
+    return ps.map((p) => {
+      const participantLoans = ls.filter((l) => l.participantId === p.id);
+      const activeLoan = participantLoans.find((l) => l.status === LoanStatus.ACTIVE);
+      const options = Object.values(p.optionsPerMonth);
+
+      return {
+        participant: p,
+        options: options.length > 0 ? options[options.length - 1] : 0,
+        hasActiveLoan: !!activeLoan,
+        hasHadLoan: participantLoans.length > 0,
+        activeLoanAmount: activeLoan?.amount ?? 0,
+      };
+    });
+  });
+
+  interestPerOption = computed(() => {
+    const totalInt = this.loans().reduce((sum, l) => sum + l.interestGenerated, 0);
+    const topt = this.totalOptions();
+    return topt > 0 ? totalInt / topt : 0;
+  });
 
   // Edit state
   editingLoanId: string | null = null;
@@ -324,15 +357,21 @@ export class FundDetailComponent implements OnInit {
     private readonly participantRepo: ParticipantRepository,
     private readonly loanRepo: LoanRepository,
     private readonly paymentRepo: PaymentRepository,
+    private readonly state: StateService,
     private readonly snackBar: MatSnackBar,
   ) {}
 
   async ngOnInit(): Promise<void> {
     this.fundId = this.route.snapshot.paramMap.get('fundId') ?? '';
-    await this.loadData();
+    
+    // Subscribe to State
+    this.state.subscribeToFunds();
+    this.state.subscribeToFundData(this.fundId);
+
+    await this.loadInitialData();
   }
 
-  async loadData(): Promise<void> {
+  async loadInitialData(): Promise<void> {
     this.isLoading.set(true);
     try {
       const fund = await this.fundRepo.getById(this.fundId);
@@ -341,49 +380,12 @@ export class FundDetailComponent implements OnInit {
         this.router.navigate(['/admin/funds']);
         return;
       }
-      this.fund.set(fund);
-
-      const [period, participants, loans] = await Promise.all([
-        this.periodRepo.getById(fund.periodId),
-        this.participantRepo.getByFund(this.fundId),
-        this.loanRepo.getByFund(this.fundId),
-      ]);
-
-      this.period.set(period);
-      this.participants.set(participants);
-      this.loans.set(loans);
-
-      // Calculate total options
-      const total = participants.reduce((sum, p) => {
-        const options = Object.values(p.optionsPerMonth);
-        return sum + (options.length > 0 ? options[options.length - 1] : 0);
-      }, 0);
-      this.totalOptions.set(total);
-
-      // Build participant loan statuses & calculate global interest
-      let totalFundInterest = 0;
-      const statuses: ParticipantLoanStatus[] = participants.map((p) => {
-        const participantLoans = loans.filter((l) => l.participantId === p.id);
-        const activeLoan = participantLoans.find((l) => l.status === LoanStatus.ACTIVE);
-        const options = Object.values(p.optionsPerMonth);
-
-        participantLoans.forEach(l => {
-          totalFundInterest += l.interestGenerated;
-        });
-
-        return {
-          participant: p,
-          options: options.length > 0 ? options[options.length - 1] : 0,
-          hasActiveLoan: !!activeLoan,
-          hasHadLoan: participantLoans.length > 0,
-          activeLoanAmount: activeLoan?.amount ?? 0,
-        };
-      });
       
-      this.participantStatuses.set(statuses);
-      this.interestPerOption.set(total > 0 ? totalFundInterest / total : 0);
+      const period = await this.periodRepo.getById(fund.periodId);
+      this.period.set(period);
+
     } catch (error) {
-      console.error('Error loading fund:', error);
+      console.error('Error loading fund initial data:', error);
     } finally {
       this.isLoading.set(false);
     }
@@ -438,7 +440,6 @@ export class FundDetailComponent implements OnInit {
 
       this.editingLoanId = null;
       this.snackBar.open('Préstamo actualizado', 'OK', { duration: 2000 });
-      await this.loadData();
     } catch (error) {
       console.error('Error updating loan:', error);
       this.snackBar.open('Error al actualizar préstamo', 'OK', { duration: 3000 });
@@ -460,7 +461,6 @@ export class FundDetailComponent implements OnInit {
     try {
       await this.loanRepo.delete(loan.id);
       this.snackBar.open('Préstamo eliminado', 'OK', { duration: 2000 });
-      await this.loadData();
     } catch (error) {
       console.error('Error deleting loan:', error);
       this.snackBar.open('Error al eliminar', 'OK', { duration: 3000 });
@@ -483,7 +483,6 @@ export class FundDetailComponent implements OnInit {
     try {
       await this.fundRepo.closeFund(this.fundId);
       this.snackBar.open('✅ Fondo cerrado exitosamente.', 'OK', { duration: 3000 });
-      await this.loadData();
     } catch (error) {
       console.error('Error closing fund:', error);
       this.snackBar.open('Error al cerrar el fondo.', 'OK', { duration: 3000 });

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { initializeApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, FirebaseApp, getApps, getApp } from 'firebase/app';
 import {
   getFirestore,
   Firestore,
@@ -42,13 +42,23 @@ import { environment } from '../../../environments/environment';
 })
 export class FirebaseService {
   private readonly app: FirebaseApp;
+  private readonly secondaryApp: FirebaseApp;
   readonly db: Firestore;
   readonly auth: Auth;
+  readonly secondaryAuth: Auth;
 
   constructor() {
     this.app = initializeApp(environment.firebase);
     this.db = getFirestore(this.app);
     this.auth = getAuth(this.app);
+
+    // Segunda instancia de Firebase exclusiva para crear cuentas
+    // sin afectar la sesión del usuario actual
+    const secondaryAppName = 'secondaryApp';
+    const existingApps = getApps();
+    this.secondaryApp = existingApps.find(a => a.name === secondaryAppName)
+      ?? initializeApp(environment.firebase, secondaryAppName);
+    this.secondaryAuth = getAuth(this.secondaryApp);
 
     // Habilitar caché offline para carga instantánea
     enableIndexedDbPersistence(this.db).catch((err) => {

@@ -24,9 +24,9 @@ export class InterestCalculator {
         ? this.compoundInterestPayment(amount, interestRate, installmentCount)
         : this.simpleInterestPayment(amount, interestRate, installmentCount);
 
-    const roundedPayment = this.roundToTwoDecimals(monthlyPayment);
-    const totalToPay = this.roundToTwoDecimals(roundedPayment * installmentCount);
-    const interestGenerated = this.roundToTwoDecimals(totalToPay - amount);
+    const roundedPayment = this.roundUp(monthlyPayment);
+    const totalToPay = this.roundUp(roundedPayment * installmentCount);
+    const interestGenerated = this.roundUp(totalToPay - amount);
 
     const installments = this.generateInstallments(
       roundedPayment,
@@ -81,7 +81,7 @@ export class InterestCalculator {
     months: number,
   ): number {
     const payment = this.compoundInterestPayment(principal, monthlyRate, months);
-    return this.roundToTwoDecimals(payment * months);
+    return this.roundUp(payment * months);
   }
 
   /**
@@ -92,7 +92,7 @@ export class InterestCalculator {
     monthlyRate: number,
     months: number,
   ): number {
-    return this.roundToTwoDecimals(principal * (1 + monthlyRate * months));
+    return this.roundUp(principal * (1 + monthlyRate * months));
   }
 
   /**
@@ -129,7 +129,11 @@ export class InterestCalculator {
     return installments;
   }
 
-  private static roundToTwoDecimals(value: number): number {
-    return Math.round(value * 100) / 100;
+  /**
+   * Redondea al décimo superior (ceil).
+   * Ej: 135.31 → 135.40, 135.39 → 135.40
+   */
+  static roundUp(value: number): number {
+    return Math.ceil(value * 10) / 10;
   }
 }

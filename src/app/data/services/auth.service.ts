@@ -105,7 +105,8 @@ export class AuthService implements OnDestroy {
   /**
    * Registra un nuevo usuario (usado por el admin para crear cuentas).
    * Si no se proporciona email, genera uno temporal.
-   * Nota: Esto cerrará la sesión del admin temporalmente en el cliente.
+   * Usa una instancia secundaria de Firebase Auth para NO afectar
+   * la sesión del admin actualmente logueado.
    */
   async registerUser(
     email: string,
@@ -116,8 +117,9 @@ export class AuthService implements OnDestroy {
   ): Promise<User> {
     const finalEmail = email.trim() || this.generatePlaceholderEmail();
 
+    // Usar la instancia SECUNDARIA para crear la cuenta
     const credential = await createUserWithEmailAndPassword(
-      this.firebase.auth,
+      this.firebase.secondaryAuth,
       finalEmail,
       password,
     );
@@ -141,6 +143,9 @@ export class AuthService implements OnDestroy {
       isPrincipalAdmin,
       createdAt: now,
     });
+
+    // Cerrar sesión en la instancia secundaria (la primaria del admin no se toca)
+    await signOut(this.firebase.secondaryAuth);
 
     return user;
   }

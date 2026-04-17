@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, computed, OnInit, effect } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FundRepository, ParticipantRepository, LoanRepository, PaymentRepository } from '../../../../data/repositories';
+import { StateService } from '../../../../data/services';
 import { FundType, FundStatus } from '../../../../core/enums';
 import type { Fund } from '../../../../core/models';
 
@@ -127,32 +128,29 @@ import type { Fund } from '../../../../core/models';
   styleUrls: ['./fund-list.component.scss'],
 })
 export class FundListComponent implements OnInit {
-  funds = signal<Fund[]>([]);
+  // En tiempo real desde StateService
+  funds = this.state.funds;
   isLoading = signal(true);
 
   constructor(
+    private readonly state: StateService,
     private readonly fundRepo: FundRepository,
     private readonly participantRepo: ParticipantRepository,
     private readonly loanRepo: LoanRepository,
     private readonly paymentRepo: PaymentRepository,
     private readonly router: Router,
     private readonly snackBar: MatSnackBar,
-  ) {}
-
-  async ngOnInit(): Promise<void> {
-    await this.loadFunds();
+  ) {
+    // Cuando los fondos llegan, quitar el loading
+    effect(() => {
+      if (this.state.funds().length >= 0) {
+        this.isLoading.set(false);
+      }
+    });
   }
 
-  async loadFunds(): Promise<void> {
-    this.isLoading.set(true);
-    try {
-      const funds = await this.fundRepo.getAll();
-      this.funds.set(funds);
-    } catch (error) {
-      console.error('Error loading funds:', error);
-    } finally {
-      this.isLoading.set(false);
-    }
+  ngOnInit(): void {
+    this.state.subscribeToFunds();
   }
 
   goToFund(id: string): void {
@@ -204,7 +202,6 @@ export class FundListComponent implements OnInit {
       await this.fundRepo.delete(fund.id);
 
       this.snackBar.open(`Fondo "${fund.name}" eliminado correctamente.`, 'OK', { duration: 4000 });
-      await this.loadFunds();
     } catch (error) {
       console.error('Error deleting fund:', error);
       this.snackBar.open('Error al eliminar el fondo. Inténtalo de nuevo.', 'OK', { duration: 4000 });

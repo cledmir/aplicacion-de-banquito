@@ -8,7 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
-import { AuthService, FirebaseService } from '../../../../data/services';
+import { AuthService, FirebaseService, StateService } from '../../../../data/services';
 import { UserRole } from '../../../../core/enums';
 
 interface UserDisplay {
@@ -210,7 +210,8 @@ interface UserDisplay {
   styleUrls: ['./user-management.component.scss'],
 })
 export class UserManagementComponent implements OnInit {
-  users = signal<UserDisplay[]>([]);
+  // En tiempo real desde StateService
+  users = this.state.users;
   isCreating = signal(false);
   errorMessage = signal('');
   successMessage = signal('');
@@ -227,28 +228,12 @@ export class UserManagementComponent implements OnInit {
   constructor(
     public readonly auth: AuthService,
     private readonly firebase: FirebaseService,
+    private readonly state: StateService,
     private readonly snackBar: MatSnackBar,
   ) {}
 
-  async ngOnInit(): Promise<void> {
-    await this.loadUsers();
-  }
-
-  async loadUsers(): Promise<void> {
-    try {
-      const docs = await this.firebase.getDocuments('users');
-      const users: UserDisplay[] = docs.map((d) => ({
-        uid: d['id'] as string,
-        displayName: (d['displayName'] as string) ?? '',
-        email: (d['email'] as string) ?? '',
-        role: (d['role'] as UserRole) ?? UserRole.PARTICIPANT,
-        isPrincipalAdmin: (d['isPrincipalAdmin'] as boolean) ?? false,
-        createdAt: (d['createdAt'] as { toDate?: () => Date })?.toDate?.() ?? new Date(),
-      }));
-      this.users.set(users);
-    } catch (error) {
-      console.error('Error loading users:', error);
-    }
+  ngOnInit(): void {
+    this.state.subscribeToUsers();
   }
 
   async createUser(): Promise<void> {
@@ -281,12 +266,10 @@ export class UserManagementComponent implements OnInit {
       this.newPassword = '';
 
       this.snackBar.open(
-        'Cuenta creada. Debes volver a iniciar sesión.',
+        `¡Cuenta creada para ${this.newName}!`,
         'OK',
-        { duration: 5000 },
+        { duration: 3000 },
       );
-
-      await this.loadUsers();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Error al crear cuenta.';
       if (message.includes('email-already-in-use')) {
@@ -335,7 +318,6 @@ export class UserManagementComponent implements OnInit {
       if (Object.keys(updateData).length > 0) {
         await this.auth.updateUserProfile(user.uid, updateData);
         this.snackBar.open('Datos actualizados correctamente.', 'OK', { duration: 3000 });
-        await this.loadUsers();
       }
 
       this.cancelEdit();
@@ -367,7 +349,6 @@ export class UserManagementComponent implements OnInit {
         'OK',
         { duration: 3000 }
       );
-      await this.loadUsers();
     } catch (error) {
       console.error('Error toggling role:', error);
       this.snackBar.open('Error al cambiar el rol. Verifica tu conexión.', 'OK', { duration: 3000 });
@@ -383,7 +364,6 @@ export class UserManagementComponent implements OnInit {
     try {
       await this.firebase.deleteDocument('users', user.uid);
       this.snackBar.open(`Usuario "${user.displayName}" eliminado.`, 'OK', { duration: 3000 });
-      await this.loadUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
       this.snackBar.open('Error al eliminar el usuario.', 'OK', { duration: 3000 });

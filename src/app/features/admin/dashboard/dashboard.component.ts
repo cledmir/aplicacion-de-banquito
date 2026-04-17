@@ -1,10 +1,10 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, computed, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { FundRepository, ParticipantRepository, LoanRepository, PaymentRepository } from '../../../data/repositories';
-import { AuthService } from '../../../data/services';
-import type { Fund, Loan, Payment } from '../../../core/models';
+import { ParticipantRepository, LoanRepository, PaymentRepository } from '../../../data/repositories';
+import { AuthService, StateService } from '../../../data/services';
+import type { Loan, Payment } from '../../../core/models';
 
 @Component({
   selector: 'bf-dashboard',
@@ -128,7 +128,11 @@ import type { Fund, Loan, Payment } from '../../../core/models';
 })
 export class DashboardComponent implements OnInit {
   userName = signal('');
-  activeFunds = signal(0);
+
+  // Computed desde StateService — se actualiza en tiempo real
+  activeFunds = computed(() =>
+    this.state.funds().filter((f) => f.status === 'active').length
+  );
   totalParticipants = signal(0);
   totalInterest = signal(0);
   activeLoans = signal(0);
@@ -137,7 +141,7 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private readonly auth: AuthService,
-    private readonly fundRepo: FundRepository,
+    private readonly state: StateService,
     private readonly participantRepo: ParticipantRepository,
     private readonly loanRepo: LoanRepository,
     private readonly paymentRepo: PaymentRepository,
@@ -146,16 +150,14 @@ export class DashboardComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     const user = this.auth.user();
     this.userName.set(user?.displayName ?? 'Admin');
+    this.state.subscribeToFunds();
     await this.loadDashboard();
   }
 
   async loadDashboard(): Promise<void> {
     try {
-      const funds = await this.fundRepo.getAll();
-      const activeFunds = funds.filter((f) => f.status === 'active');
-      this.activeFunds.set(activeFunds.length);
+      const activeFunds = this.state.funds().filter((f) => f.status === 'active');
 
-      // Load data for all funds in parallel
       let totalParticipants = 0;
       let totalInterest = 0;
       let totalActiveLoans = 0;
@@ -182,7 +184,6 @@ export class DashboardComponent implements OnInit {
       this.totalInterest.set(totalInterest);
       this.activeLoans.set(totalActiveLoans);
 
-      // Sort and take recent
       allLoans.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       allPayments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
