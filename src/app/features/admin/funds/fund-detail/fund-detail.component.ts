@@ -9,6 +9,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FundRepository, PeriodRepository, ParticipantRepository, LoanRepository, PaymentRepository } from '../../../../data/repositories';
 import { StateService } from '../../../../data/services';
@@ -38,10 +39,16 @@ interface ParticipantLoanStatus {
     MatInputModule,
     MatSelectModule,
     MatSnackBarModule,
+    MatProgressSpinnerModule,
   ],
   template: `
     <div class="page animate-fade-in">
-      @if (fund()) {
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando información del fondo...</p>
+        </div>
+      } @else if (fund()) {
         <div class="page-header">
           <div>
             <div class="fund-title-row">

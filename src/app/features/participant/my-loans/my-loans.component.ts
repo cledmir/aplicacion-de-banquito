@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../data/services';
 import { FundRepository, ParticipantRepository, LoanRepository } from '../../../data/repositories';
 import { LoanStatus } from '../../../core/enums';
@@ -15,7 +16,7 @@ interface LoanWithFund extends Loan {
 @Component({
   selector: 'bf-my-loans',
   standalone: true,
-  imports: [RouterLink, DatePipe, MatIconModule, MatButtonModule],
+  imports: [RouterLink, DatePipe, MatIconModule, MatButtonModule, MatProgressSpinnerModule],
   template: `
     <div class="page animate-fade-in">
       <div class="page-header">
@@ -25,7 +26,12 @@ interface LoanWithFund extends Loan {
         </a>
       </div>
 
-      @if (loans().length > 0) {
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando tus préstamos...</p>
+        </div>
+      } @else if (loans().length > 0) {
         @for (loan of loans(); track loan.id) {
           <div class="loan-card" [class.paid]="loan.status === 'paid'">
             <div class="loan-card__header">
@@ -97,6 +103,7 @@ interface LoanWithFund extends Loan {
   styleUrls: ['./my-loans.component.scss'],
 })
 export class MyLoansComponent implements OnInit {
+  isLoading = signal(true);
   loans = signal<LoanWithFund[]>([]);
 
   constructor(
@@ -111,6 +118,7 @@ export class MyLoansComponent implements OnInit {
   }
 
   async loadData(): Promise<void> {
+    this.isLoading.set(true);
     try {
       const user = this.auth.user();
       if (!user) return;
@@ -136,6 +144,8 @@ export class MyLoansComponent implements OnInit {
       this.loans.set(allLoans);
     } catch (error) {
       console.error('Error loading loans:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

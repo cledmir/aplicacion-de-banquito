@@ -4,6 +4,7 @@ import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoanRepository, FundRepository } from '../../../../data/repositories';
 import { LoanStatus } from '../../../../core/enums';
@@ -12,7 +13,7 @@ import type { Loan, Fund } from '../../../../core/models';
 @Component({
   selector: 'bf-loan-list',
   standalone: true,
-  imports: [RouterLink, DatePipe, MatButtonModule, MatIconModule, MatChipsModule, MatSnackBarModule],
+  imports: [RouterLink, DatePipe, MatButtonModule, MatIconModule, MatChipsModule, MatSnackBarModule, MatProgressSpinnerModule],
   template: `
     <div class="page animate-fade-in">
       <div class="page-header">
@@ -35,7 +36,12 @@ import type { Loan, Fund } from '../../../../core/models';
         </div>
       </div>
 
-      @if (loans().length > 0) {
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando préstamos...</p>
+        </div>
+      } @else if (loans().length > 0) {
         <div class="loans-grid">
           @for (loan of loans(); track loan.id) {
             <div class="loan-card" [class.paid]="loan.status === LoanStatus.PAID">
@@ -98,6 +104,7 @@ export class LoanListComponent implements OnInit {
   fundId = '';
   fund = signal<Fund | null>(null);
   loans = signal<Loan[]>([]);
+  isLoading = signal(true);
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -112,6 +119,7 @@ export class LoanListComponent implements OnInit {
   }
 
   async loadData(): Promise<void> {
+    this.isLoading.set(true);
     try {
       const [fund, loans] = await Promise.all([
         this.fundRepo.getById(this.fundId),
@@ -121,6 +129,8 @@ export class LoanListComponent implements OnInit {
       this.loans.set(loans);
     } catch (error) {
       console.error('Error loading loans:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

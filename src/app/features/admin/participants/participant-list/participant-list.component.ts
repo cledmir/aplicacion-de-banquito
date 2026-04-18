@@ -49,6 +49,13 @@ interface UserOption {
         </a>
       </div>
 
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando participantes...</p>
+        </div>
+      } @else {
+
       <!-- Add Participant Form -->
       <div class="add-form-card">
         <h3 class="section-title">
@@ -137,6 +144,7 @@ interface UserOption {
           <p>Agrega participantes usando el formulario de arriba</p>
         </div>
       }
+      }
     </div>
   `,
   styleUrls: ['./participant-list.component.scss'],
@@ -152,6 +160,7 @@ export class ParticipantListComponent implements OnInit {
   selectedUserId = '';
   initialOptions = 1;
   isAdding = signal(false);
+  isLoading = signal(true);
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -168,6 +177,7 @@ export class ParticipantListComponent implements OnInit {
   }
 
   async loadData(): Promise<void> {
+    this.isLoading.set(true);
     try {
       const fund = await this.fundRepo.getById(this.fundId);
       this.fund.set(fund);
@@ -186,6 +196,8 @@ export class ParticipantListComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

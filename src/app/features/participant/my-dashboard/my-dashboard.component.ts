@@ -2,6 +2,7 @@ import { Component, signal, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../data/services';
 import { FundRepository, ParticipantRepository, LoanRepository, PaymentRepository, PeriodRepository } from '../../../data/repositories';
 import { LoanStatus, PaymentType } from '../../../core/enums';
@@ -27,13 +28,20 @@ interface FundSummary {
 @Component({
   selector: 'bf-my-dashboard',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <div class="page animate-fade-in">
       <div class="welcome-section">
         <h1 class="welcome-title">¡Hola, {{ userName() }}! 👋</h1>
         <p class="welcome-sub">Tu resumen de participación</p>
       </div>
+
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando tu información financiera...</p>
+        </div>
+      } @else {
 
       <!-- KPIs -->
       <div class="kpi-grid">
@@ -182,6 +190,7 @@ interface FundSummary {
             Mis Cuotas Mensuales
           </a>
         </div>
+      }
       }
     </div>
   `,

@@ -2,6 +2,7 @@ import { Component, signal, computed, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ParticipantRepository, LoanRepository, PaymentRepository } from '../../../data/repositories';
 import { AuthService, StateService } from '../../../data/services';
 import type { Loan, Payment } from '../../../core/models';
@@ -9,7 +10,7 @@ import type { Loan, Payment } from '../../../core/models';
 @Component({
   selector: 'bf-dashboard',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <div class="page animate-fade-in">
       <div class="page-header">
@@ -18,6 +19,13 @@ import type { Loan, Payment } from '../../../core/models';
           <p class="page-header__subtitle">Resumen de tu sistema de ahorro</p>
         </div>
       </div>
+
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando resumen de administrador...</p>
+        </div>
+      } @else {
 
       <!-- KPI Cards -->
       <div class="kpi-grid">
@@ -122,6 +130,7 @@ import type { Loan, Payment } from '../../../core/models';
           }
         </div>
       }
+      }
     </div>
   `,
   styleUrls: ['./dashboard.component.scss'],
@@ -134,6 +143,7 @@ export class DashboardComponent implements OnInit {
   activeFunds = computed(() =>
     this.state.funds().filter((f) => f.status === 'active').length
   );
+  isLoading = signal(true);
   totalParticipants = signal(0);
   totalInterest = signal(0);
   activeLoans = signal(0);
@@ -155,6 +165,7 @@ export class DashboardComponent implements OnInit {
   }
 
   async loadDashboard(): Promise<void> {
+    this.isLoading.set(true);
     try {
       const activeFunds = this.state.funds().filter((f) => f.status === 'active');
 
@@ -191,6 +202,8 @@ export class DashboardComponent implements OnInit {
       this.recentPayments.set(allPayments.slice(0, 5));
     } catch (error) {
       console.error('Error loading dashboard:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 }
