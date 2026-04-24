@@ -2,6 +2,7 @@ import { Component, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
   FundRepository,
   PeriodRepository,
@@ -42,7 +43,7 @@ interface ParticipantReport {
 @Component({
   selector: 'bf-period-report',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <div class="page animate-fade-in">
       <div class="page-header">
@@ -67,6 +68,13 @@ interface ParticipantReport {
           </a>
         </div>
       </div>
+
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Generando reporte del período...</p>
+        </div>
+      } @else {
 
       <!-- Global KPIs -->
       <div class="kpi-grid">
@@ -198,6 +206,7 @@ interface ParticipantReport {
           </div>
         </div>
       </div>
+      }
     </div>
   `,
   styleUrls: ['./period-report.component.scss'],
@@ -208,6 +217,7 @@ export class PeriodReportComponent implements OnInit {
   period = signal<Period | null>(null);
   monthReports = signal<MonthReport[]>([]);
   participantReports = signal<ParticipantReport[]>([]);
+  isLoading = signal(true);
 
   totalCollected = signal(0);
   totalInterest = signal(0);
@@ -232,6 +242,7 @@ export class PeriodReportComponent implements OnInit {
   }
 
   async loadReport(): Promise<void> {
+    this.isLoading.set(true);
     try {
       const fund = await this.fundRepo.getById(this.fundId);
       if (!fund) return;
@@ -344,6 +355,8 @@ export class PeriodReportComponent implements OnInit {
       this.totalPending.set(Math.max(0, totalExpected - totalColl));
     } catch (error) {
       console.error('Error loading report:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

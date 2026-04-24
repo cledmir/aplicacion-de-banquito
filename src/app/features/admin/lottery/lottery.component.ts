@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ParticipantRepository, FundRepository } from '../../../data/repositories';
 import { FundStatus } from '../../../core/enums';
 import type { Participant, Fund } from '../../../core/models';
@@ -20,7 +21,7 @@ interface WheelSegment {
 @Component({
   selector: 'bf-lottery',
   standalone: true,
-  imports: [RouterLink, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSnackBarModule],
+  imports: [RouterLink, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSnackBarModule, MatProgressSpinnerModule],
   template: `
     <div class="page animate-fade-in">
       <div class="page-header">
@@ -36,7 +37,12 @@ interface WheelSegment {
         </a>
       </div>
 
-      @if (eligibleParticipants().length >= 2) {
+      @if (isLoading()) {
+        <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p style="margin-top:1rem;">Cargando datos del sorteo...</p>
+        </div>
+      } @else if (eligibleParticipants().length >= 2) {
         <div class="lottery-container">
           <!-- Wheel -->
           <div class="wheel-wrapper">
@@ -147,6 +153,7 @@ export class LotteryComponent implements OnInit {
   isSpinning = signal(false);
   currentWinnerIndex = signal(0);
   maxWinners = signal(1);
+  isLoading = signal(true);
 
   winnerCount = 1;
   private currentAngle = 0;
@@ -169,6 +176,7 @@ export class LotteryComponent implements OnInit {
   }
 
   async loadData(): Promise<void> {
+    this.isLoading.set(true);
     try {
       const [fund, participants] = await Promise.all([
         this.fundRepo.getById(this.fundId),
@@ -181,6 +189,8 @@ export class LotteryComponent implements OnInit {
       setTimeout(() => this.drawWheel(), 100);
     } catch (error) {
       console.error('Error loading data:', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

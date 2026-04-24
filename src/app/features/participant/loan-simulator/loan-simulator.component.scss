@@ -1,6 +1,15 @@
 @use 'styles/variables' as *;
 @use 'styles/mixins' as *;
 
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-lg;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+}
+
 .page-title {
   display: flex;
   align-items: center;
@@ -14,7 +23,6 @@
 
 .page-subtitle {
   color: $color-text-secondary;
-  margin-bottom: $spacing-xl;
 }
 
 .simulator-container {
@@ -36,6 +44,18 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: $spacing-sm;
+}
+
+.simulate-btn {
+  width: 100%;
+  margin-top: $spacing-sm;
+  padding: 10px 0;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
 }
 
 // ===== Results =====

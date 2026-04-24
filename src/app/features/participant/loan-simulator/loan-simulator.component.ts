@@ -1,4 +1,5 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, computed, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -7,14 +8,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../data/services';
-import { FundRepository, ParticipantRepository, LoanRepository, PaymentRepository, PeriodRepository } from '../../../data/repositories';
-import { InterestCalculator, DateUtils } from '../../../core/utils';
+import { FundRepository, ParticipantRepository, LoanRepository, PaymentRepository } from '../../../data/repositories';
+import { InterestCalculator } from '../../../core/utils';
 import { FundType } from '../../../core/enums';
-import type { Fund, Period, LoanCalculation } from '../../../core/models';
+import type { Fund, LoanCalculation } from '../../../core/models';
 
 interface SimulatorFund {
   fund: Fund;
-  period: Period;
   availableBalance: number;
 }
 
@@ -22,6 +22,7 @@ interface SimulatorFund {
   selector: 'bf-loan-simulator',
   standalone: true,
   imports: [
+    RouterLink,
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
@@ -32,16 +33,23 @@ interface SimulatorFund {
   ],
   template: `
     <div class="page animate-fade-in">
-      <h1 class="page-title">
-        <mat-icon>calculate</mat-icon>
-        Simulador de Préstamos
-      </h1>
-      <p class="page-subtitle">Calcula cuánto pagarías antes de solicitar un préstamo</p>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">
+            <mat-icon>calculate</mat-icon>
+            Simulador de Préstamos
+          </h1>
+          <p class="page-subtitle">Calcula cuánto pagarías antes de solicitar un préstamo</p>
+        </div>
+        <a mat-button [routerLink]="backRoute()">
+          <mat-icon>arrow_back</mat-icon> Volver al inicio
+        </a>
+      </div>
 
       @if (isLoading()) {
         <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:4rem;">
           <mat-spinner diameter="40"></mat-spinner>
-          <p style="margin-top:1rem;">Cargando tus fondos activos...</p>
+          <p style="margin-top:1rem;">Cargando fondos activos...</p>
         </div>
       } @else {
         <div class="simulator-container">
@@ -65,28 +73,22 @@ interface SimulatorFund {
               <mat-form-field appearance="outline">
                 <mat-label>Monto (S/)</mat-label>
                 <input matInput type="number" [(ngModel)]="amount"
-                       name="amount" min="100" step="50"
-                       (ngModelChange)="simulate()" />
+                       name="amount" min="100" step="50" />
                 <span matPrefix>S/&nbsp;</span>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Cuotas (meses)</mat-label>
                 <input matInput type="number" [(ngModel)]="installments"
-                       name="installments" min="1" [max]="maxInstallments()"
-                       (ngModelChange)="simulate()" />
+                       name="installments" min="1" max="12" />
               </mat-form-field>
             </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Mes de inicio</mat-label>
-              <mat-select [(ngModel)]="startMonth" name="startMonth"
-                          (ngModelChange)="simulate()">
-                @for (m of months(); track m) {
-                  <mat-option [value]="m">{{ m }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <button mat-flat-button color="primary" class="simulate-btn"
+                    (click)="simulate()" [disabled]="amount <= 0 || installments <= 0">
+              <mat-icon>play_arrow</mat-icon>
+              Simular
+            </button>
           } @else {
             <div class="empty-state">
               <span class="empty-icon">📊</span>
@@ -176,21 +178,21 @@ interface SimulatorFund {
 export class LoanSimulatorComponent implements OnInit {
   isLoading = signal(true);
   availableFunds = signal<SimulatorFund[]>([]);
-  months = signal<string[]>([]);
-  maxInstallments = signal(12);
   result = signal<LoanCalculation | null>(null);
   comparisons = signal<{ months: number; monthlyPayment: number; interest: number }[]>([]);
+
+  backRoute = computed(() =>
+    this.auth.isAdmin() ? '/admin/dashboard' : '/participant/dashboard'
+  );
 
   selectedFundIndex = 0;
   amount = 500;
   installments = 3;
-  startMonth = '';
 
   constructor(
     private readonly auth: AuthService,
     private readonly fundRepo: FundRepository,
     private readonly participantRepo: ParticipantRepository,
-    private readonly periodRepo: PeriodRepository,
     private readonly paymentRepo: PaymentRepository,
     private readonly loanRepo: LoanRepository,
   ) {}
@@ -217,27 +219,28 @@ export class LoanSimulatorComponent implements OnInit {
 
       const funds = await this.fundRepo.getAll();
       const simFunds: SimulatorFund[] = [];
+      const isAdmin = this.auth.isAdmin();
 
       for (const fund of funds) {
-        const participants = await this.participantRepo.getByFund(fund.id);
-        const me = participants.find((p) => p.userId === user.uid);
-        if (!me) continue;
+        if (!isAdmin) {
+          // Participante: solo fondos donde participa
+          const participants = await this.participantRepo.getByFund(fund.id);
+          const me = participants.find((p) => p.userId === user.uid);
+          if (!me) continue;
+        }
 
-        const [period, payments, fundLoans] = await Promise.all([
-          this.periodRepo.getById(fund.periodId),
+        const [payments, fundLoans] = await Promise.all([
           this.paymentRepo.getByFund(fund.id),
           this.loanRepo.getByFund(fund.id)
         ]);
 
-        if (period) {
-          const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
-          const totalLoaned = fundLoans
-            .filter((l) => l.status === 'active')
-            .reduce((sum, l) => sum + l.amount, 0);
-          const balance = Math.max(0, totalCollected - totalLoaned);
+        const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
+        const totalLoaned = fundLoans
+          .filter((l) => l.status === 'active')
+          .reduce((sum, l) => sum + l.amount, 0);
+        const balance = Math.max(0, totalCollected - totalLoaned);
 
-          simFunds.push({ fund, period, availableBalance: balance });
-        }
+        simFunds.push({ fund, availableBalance: balance });
       }
 
       this.availableFunds.set(simFunds);
@@ -256,18 +259,9 @@ export class LoanSimulatorComponent implements OnInit {
     const sf = this.availableFunds()[this.selectedFundIndex];
     if (!sf) return;
 
-    this.months.set(sf.period.months);
-    this.maxInstallments.set(sf.period.months.length);
     this.amount = sf.availableBalance;
-    if (sf.period.months.length > 0) {
-      const smartMonth = DateUtils.getSmartCurrentMonth();
-      if (sf.period.months.includes(smartMonth)) {
-        this.startMonth = smartMonth;
-      } else {
-        this.startMonth = sf.period.months[0];
-      }
-    }
-    this.simulate();
+    this.result.set(null);
+    this.comparisons.set([]);
   }
 
   simulate(): void {
@@ -283,21 +277,17 @@ export class LoanSimulatorComponent implements OnInit {
         this.amount,
         this.installments,
         sf.fund.interestRate,
-        this.startMonth,
-        sf.period.months,
       );
       this.result.set(calc);
 
       // Generate comparisons
-      const terms = [1, 2, 3, 4, 6, 8, 10, 12].filter((t) => t <= sf.period.months.length);
+      const terms = [1, 2, 3, 4, 6, 8, 10, 12];
       const comps = terms.map((months) => {
         const c = InterestCalculator.calculate(
           sf.fund.type as FundType,
           this.amount,
           months,
           sf.fund.interestRate,
-          this.startMonth,
-          sf.period.months,
         );
         return {
           months,

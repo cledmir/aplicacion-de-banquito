@@ -87,6 +87,18 @@ import { AuthService } from '../../data/services';
               <span>Usuarios</span>
             }
           </a>
+          <a
+            routerLink="/admin/simulator"
+            routerLinkActive="active"
+            class="nav-item"
+            [matTooltip]="sidebarCollapsed() ? 'Simulador' : ''"
+            matTooltipPosition="right"
+          >
+            <mat-icon>calculate</mat-icon>
+            @if (!sidebarCollapsed()) {
+              <span>Simulador</span>
+            }
+          </a>
         </nav>
 
         <div class="sidebar__footer">

@@ -1,4 +1,4 @@
-import { Component, signal, computed, OnInit, inject } from '@angular/core';
+import { Component, signal, computed, OnInit, inject, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -110,7 +110,12 @@ interface UserDisplay {
           Usuarios registrados ({{ users().length }})
         </h3>
 
-        @if (users().length > 0) {
+        @if (isLoading()) {
+          <div class="loading-state" style="display:flex; flex-direction:column; align-items:center; opacity:0.7; padding:3rem;">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p style="margin-top:1rem;">Cargando usuarios...</p>
+          </div>
+        } @else if (users().length > 0) {
           <div class="users-table">
             <div class="user-row header">
               <span>Nombre</span>
@@ -259,6 +264,7 @@ export class UserManagementComponent implements OnInit {
 
   // En tiempo real desde StateService
   users = this.state.users;
+  isLoading = signal(true);
   isCreating = signal(false);
   errorMessage = signal('');
   successMessage = signal('');
@@ -288,7 +294,15 @@ export class UserManagementComponent implements OnInit {
     public readonly auth: AuthService,
     private readonly firebase: FirebaseService,
     private readonly snackBar: MatSnackBar,
-  ) {}
+  ) {
+    // Turn off loading once StateService emits users for the first time
+    effect(() => {
+      this.users(); // subscribe to signal
+      if (this.isLoading()) {
+        this.isLoading.set(false);
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.state.subscribeToUsers();

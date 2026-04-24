@@ -290,16 +290,6 @@ interface ParticipantLoanStatus {
           }
         </div>
 
-      } @else if (isLoading()) {
-        <div class="loading-state">
-          <div class="skeleton" style="height: 32px; width: 300px;"></div>
-          <div class="skeleton" style="height: 16px; width: 200px; margin-top: 8px;"></div>
-          <div class="stats-grid" style="margin-top: 24px;">
-            @for (i of [1,2,3,4]; track i) {
-              <div class="skeleton" style="height: 80px;"></div>
-            }
-          </div>
-        </div>
       }
     </div>
   `,

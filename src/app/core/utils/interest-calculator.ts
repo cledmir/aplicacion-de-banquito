@@ -16,8 +16,8 @@ export class InterestCalculator {
     amount: number,
     installmentCount: number,
     interestRate: number,
-    startMonth: string,
-    availableMonths: string[],
+    startMonth?: string,
+    availableMonths?: string[],
   ): LoanCalculation {
     const monthlyPayment =
       fundType === FundType.BANQUITO
@@ -28,12 +28,14 @@ export class InterestCalculator {
     const totalToPay = this.roundTenth(roundedPayment * installmentCount);
     const interestGenerated = this.roundTenth(totalToPay - amount);
 
-    const installments = this.generateInstallments(
-      roundedPayment,
-      installmentCount,
-      startMonth,
-      availableMonths,
-    );
+    const installments = (startMonth && availableMonths && availableMonths.length > 0)
+      ? this.generateInstallments(
+          roundedPayment,
+          installmentCount,
+          startMonth,
+          availableMonths,
+        )
+      : this.generateGenericInstallments(roundedPayment, installmentCount);
 
     return {
       monthlyPayment: roundedPayment,
@@ -126,6 +128,25 @@ export class InterestCalculator {
       });
     }
 
+    return installments;
+  }
+
+  /**
+   * Genera cuotas con meses genéricos (Cuota 1, Cuota 2, ...).
+   */
+  private static generateGenericInstallments(
+    monthlyPayment: number,
+    count: number,
+  ): LoanInstallment[] {
+    const installments: LoanInstallment[] = [];
+    for (let i = 0; i < count; i++) {
+      installments.push({
+        month: `Cuota ${i + 1}`,
+        amount: monthlyPayment,
+        paid: false,
+        paidAt: null,
+      });
+    }
     return installments;
   }
 

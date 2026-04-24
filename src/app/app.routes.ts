@@ -108,6 +108,13 @@ export const routes: Routes = [
             (m) => m.UserManagementComponent,
           ),
       },
+      {
+        path: 'simulator',
+        loadComponent: () =>
+          import(
+            './features/participant/loan-simulator/loan-simulator.component'
+          ).then((m) => m.LoanSimulatorComponent),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
