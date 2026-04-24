@@ -295,12 +295,15 @@ export class UserManagementComponent implements OnInit {
     private readonly firebase: FirebaseService,
     private readonly snackBar: MatSnackBar,
   ) {
-    // Turn off loading once StateService emits users for the first time
+    // Turn off loading once Firestore actually delivers user data
+    let firstRun = true;
     effect(() => {
-      this.users(); // subscribe to signal
-      if (this.isLoading()) {
-        this.isLoading.set(false);
+      this.users(); // track signal
+      if (firstRun) {
+        firstRun = false;
+        return; // skip the initial empty value
       }
+      this.isLoading.set(false);
     });
   }
 

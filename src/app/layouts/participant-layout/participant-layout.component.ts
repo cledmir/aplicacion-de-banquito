@@ -59,9 +59,9 @@ import { AuthService } from '../../data/services';
           <mat-icon>account_balance_wallet</mat-icon>
           <span>Préstamos</span>
         </a>
-        <a routerLink="/participant/payments" routerLinkActive="active" class="bottom-nav__item">
-          <mat-icon>receipt_long</mat-icon>
-          <span>Pagos</span>
+        <a routerLink="/participant/obligations" routerLinkActive="active" class="bottom-nav__item">
+          <mat-icon>event_note</mat-icon>
+          <span>Cuotas</span>
         </a>
       </nav>
 
