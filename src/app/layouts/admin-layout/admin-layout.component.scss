@@ -241,6 +241,11 @@
   margin-left: $sidebar-collapsed-width;
 }
 
+// ===== Admin Mobile Bottom Nav =====
+.admin-bottom-nav {
+  display: none; // hidden on desktop
+}
+
 // ===== Responsive =====
 @include mobile-only {
   .sidebar {
@@ -253,5 +258,43 @@
 
   .main-content {
     margin-left: 0 !important;
+    padding-bottom: 80px; // space for bottom nav
+  }
+
+  .admin-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: $color-bg-secondary;
+    border-top: 1px solid $glass-border;
+    justify-content: space-around;
+    align-items: center;
+    z-index: $z-sticky;
+
+    &__item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: $color-text-muted;
+      text-decoration: none;
+      font-size: $font-size-xs;
+      padding: $spacing-xs $spacing-md;
+      border-radius: $radius-md;
+      transition: all $transition-fast;
+
+      mat-icon { font-size: 22px; }
+
+      &:hover {
+        color: $color-text-secondary;
+      }
+
+      &.active {
+        color: $color-primary-light;
+      }
+    }
   }
 }

@@ -171,6 +171,26 @@ import { AuthService } from '../../data/services';
         </div>
       }
 
+      <!-- Mobile Bottom Nav -->
+      <nav class="admin-bottom-nav">
+        <a routerLink="/admin/dashboard" routerLinkActive="active" class="admin-bottom-nav__item">
+          <mat-icon>dashboard</mat-icon>
+          <span>Inicio</span>
+        </a>
+        <a routerLink="/admin/funds" routerLinkActive="active" class="admin-bottom-nav__item">
+          <mat-icon>account_balance</mat-icon>
+          <span>Fondos</span>
+        </a>
+        <a routerLink="/admin/users" routerLinkActive="active" class="admin-bottom-nav__item">
+          <mat-icon>people</mat-icon>
+          <span>Usuarios</span>
+        </a>
+        <a routerLink="/admin/simulator" routerLinkActive="active" class="admin-bottom-nav__item">
+          <mat-icon>calculate</mat-icon>
+          <span>Simulador</span>
+        </a>
+      </nav>
+
       <!-- Main Content -->
       <main class="main-content">
         <router-outlet />
