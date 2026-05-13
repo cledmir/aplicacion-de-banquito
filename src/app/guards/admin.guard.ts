@@ -11,7 +11,7 @@ export const adminGuard: CanActivateFn = async () => {
   const router = inject(Router);
 
   // Esperar a que Firebase Auth termine de restaurar la sesión
-  await waitForAuth(auth);
+  await auth.authReady;
 
   if (auth.isAdmin()) {
     return true;
@@ -25,20 +25,3 @@ export const adminGuard: CanActivateFn = async () => {
 
   return false;
 };
-
-function waitForAuth(auth: AuthService): Promise<void> {
-  return new Promise((resolve) => {
-    if (!auth.isLoading()) {
-      resolve();
-      return;
-    }
-    // Revisar cada 50ms hasta que termine de cargar (máx 5 seg)
-    const interval = setInterval(() => {
-      if (!auth.isLoading()) {
-        clearInterval(interval);
-        resolve();
-      }
-    }, 50);
-    setTimeout(() => { clearInterval(interval); resolve(); }, 5000);
-  });
-}

@@ -161,6 +161,7 @@ export class MyObligationsComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
+    await this.auth.authReady;
     await this.initializeData();
   }
 
@@ -172,17 +173,24 @@ export class MyObligationsComponent implements OnInit {
 
       const funds = await this.fundRepo.getAll();
       const allMonthsSet = new Set<string>();
-      const participations = [];
+      const participations: { fund: Fund; participant: Participant; period: Period }[] = [];
 
-      for (const fund of funds) {
-        const participants = await this.participantRepo.getByFund(fund.id);
-        const myP = participants.find((p) => p.userId === user.uid);
-        if (!myP) continue;
+      // Parallel: find participations for all funds at once
+      const results = await Promise.all(
+        funds.map(async (fund) => {
+          const participants = await this.participantRepo.getByFund(fund.id);
+          const myP = participants.find((p) => p.userId === user.uid);
+          if (!myP) return null;
 
-        const period = await this.periodRepo.getById(fund.periodId);
-        if (period) {
-          participations.push({ fund, participant: myP, period });
-          period.months.forEach(m => allMonthsSet.add(m));
+          const period = await this.periodRepo.getById(fund.periodId);
+          return period ? { fund, participant: myP, period } : null;
+        })
+      );
+
+      for (const result of results) {
+        if (result) {
+          participations.push(result);
+          result.period.months.forEach(m => allMonthsSet.add(m));
         }
       }
 

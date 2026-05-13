@@ -296,14 +296,11 @@ export class UserManagementComponent implements OnInit {
     private readonly snackBar: MatSnackBar,
   ) {
     // Turn off loading once Firestore actually delivers user data
-    let firstRun = true;
     effect(() => {
-      this.users(); // track signal
-      if (firstRun) {
-        firstRun = false;
-        return; // skip the initial empty value
+      const loaded = this.state.usersLoaded();
+      if (loaded) {
+        this.isLoading.set(false);
       }
-      this.isLoading.set(false);
     });
   }
 

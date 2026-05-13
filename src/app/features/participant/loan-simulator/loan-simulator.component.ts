@@ -208,6 +208,7 @@ export class LoanSimulatorComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    await this.auth.authReady;
     await this.loadFunds();
   }
 
@@ -218,31 +219,34 @@ export class LoanSimulatorComponent implements OnInit {
       if (!user) return;
 
       const funds = await this.fundRepo.getAll();
-      const simFunds: SimulatorFund[] = [];
       const isAdmin = this.auth.isAdmin();
 
-      for (const fund of funds) {
-        if (!isAdmin) {
-          // Participante: solo fondos donde participa
-          const participants = await this.participantRepo.getByFund(fund.id);
-          const me = participants.find((p) => p.userId === user.uid);
-          if (!me) continue;
-        }
+      // Parallel: process all funds at once
+      const results = await Promise.all(
+        funds.map(async (fund) => {
+          if (!isAdmin) {
+            // Participante: solo fondos donde participa
+            const participants = await this.participantRepo.getByFund(fund.id);
+            const me = participants.find((p) => p.userId === user.uid);
+            if (!me) return null;
+          }
 
-        const [payments, fundLoans] = await Promise.all([
-          this.paymentRepo.getByFund(fund.id),
-          this.loanRepo.getByFund(fund.id)
-        ]);
+          const [payments, fundLoans] = await Promise.all([
+            this.paymentRepo.getByFund(fund.id),
+            this.loanRepo.getByFund(fund.id)
+          ]);
 
-        const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
-        const totalLoaned = fundLoans
-          .filter((l) => l.status === 'active')
-          .reduce((sum, l) => sum + l.amount, 0);
-        const balance = Math.max(0, totalCollected - totalLoaned);
+          const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
+          const totalLoaned = fundLoans
+            .filter((l) => l.status === 'active')
+            .reduce((sum, l) => sum + l.amount, 0);
+          const balance = Math.max(0, totalCollected - totalLoaned);
 
-        simFunds.push({ fund, availableBalance: balance });
-      }
+          return { fund, availableBalance: balance } as SimulatorFund;
+        })
+      );
 
+      const simFunds = results.filter((r): r is SimulatorFund => r !== null);
       this.availableFunds.set(simFunds);
 
       if (simFunds.length > 0) {

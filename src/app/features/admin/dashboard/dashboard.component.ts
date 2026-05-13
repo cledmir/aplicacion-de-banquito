@@ -1,4 +1,4 @@
-import { Component, signal, computed, OnInit, inject } from '@angular/core';
+import { Component, signal, computed, OnInit, inject, effect } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -138,6 +138,7 @@ import type { Loan, Payment } from '../../../core/models';
 export class DashboardComponent implements OnInit {
   userName = signal('');
   private readonly state = inject(StateService);
+  private dataLoaded = false;
 
   // Computed desde StateService — se actualiza en tiempo real
   activeFunds = computed(() =>
@@ -155,13 +156,23 @@ export class DashboardComponent implements OnInit {
     private readonly participantRepo: ParticipantRepository,
     private readonly loanRepo: LoanRepository,
     private readonly paymentRepo: PaymentRepository,
-  ) {}
+  ) {
+    // React to funds being loaded — auto-load dashboard data
+    effect(() => {
+      const loaded = this.state.fundsLoaded();
+      if (loaded && !this.dataLoaded) {
+        this.dataLoaded = true;
+        this.loadDashboard();
+      }
+    });
+  }
 
   async ngOnInit(): Promise<void> {
+    // Ensure auth is ready before reading user
+    await this.auth.authReady;
     const user = this.auth.user();
     this.userName.set(user?.displayName ?? 'Admin');
     this.state.subscribeToFunds();
-    await this.loadDashboard();
   }
 
   async loadDashboard(): Promise<void> {
@@ -175,6 +186,7 @@ export class DashboardComponent implements OnInit {
       const allLoans: Loan[] = [];
       const allPayments: Payment[] = [];
 
+      // Parallel fetch per fund — much faster than sequential
       await Promise.all(
         activeFunds.map(async (fund) => {
           const [participants, loans, payments] = await Promise.all([

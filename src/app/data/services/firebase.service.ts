@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
 import { initializeApp, FirebaseApp, getApps, getApp } from 'firebase/app';
 import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   getFirestore,
   Firestore,
   collection,
@@ -18,7 +21,6 @@ import {
   DocumentReference,
   CollectionReference,
   setDoc,
-  enableIndexedDbPersistence,
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -35,7 +37,7 @@ import { environment } from '../../../environments/environment';
 /**
  * Servicio base de Firebase. Inicializa la app y expone
  * las instancias de Auth y Firestore.
- * Habilita persistencia offline para carga instantánea.
+ * Usa persistentLocalCache para carga instantánea y soporte multi-pestaña.
  */
 @Injectable({
   providedIn: 'root',
@@ -50,7 +52,14 @@ export class FirebaseService {
 
   constructor() {
     this.app = initializeApp(environment.firebase);
-    this.db = getFirestore(this.app);
+
+    // Use modern persistent cache with multi-tab support
+    this.db = initializeFirestore(this.app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+
     this.auth = getAuth(this.app);
 
     // Segunda instancia de Firebase exclusiva para crear cuentas
@@ -61,15 +70,6 @@ export class FirebaseService {
       ?? initializeApp(environment.firebase, secondaryAppName);
     this.secondaryAuth = getAuth(this.secondaryApp);
     this.secondaryDb = getFirestore(this.secondaryApp);
-
-    // Habilitar caché offline para carga instantánea
-    enableIndexedDbPersistence(this.db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('Firestore persistence: múltiples pestañas abiertas.');
-      } else if (err.code === 'unimplemented') {
-        console.warn('Firestore persistence: navegador no compatible.');
-      }
-    });
   }
 
   // ===== Firestore Helpers =====

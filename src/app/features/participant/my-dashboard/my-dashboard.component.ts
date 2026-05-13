@@ -219,6 +219,8 @@ export class MyDashboardComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
+    // Wait for auth to be fully ready before reading user data
+    await this.auth.authReady;
     const user = this.auth.user();
     this.userName.set(user?.displayName ?? 'Participante');
     await this.loadData();
@@ -230,7 +232,24 @@ export class MyDashboardComponent implements OnInit {
       const user = this.auth.user();
       if (!user) return;
 
+      // Step 1: Get all funds
       const funds = await this.fundRepo.getAll();
+
+      // Step 2: Find user's participations in parallel
+      const fundParticipations = await Promise.all(
+        funds.map(async (fund) => {
+          const participants = await this.participantRepo.getByFund(fund.id);
+          const myParticipation = participants.find((p) => p.userId === user.uid);
+          return myParticipation ? { fund, participants, myParticipation } : null;
+        })
+      );
+
+      // Filter only funds where user participates
+      const activeFunds = fundParticipations.filter(
+        (fp): fp is NonNullable<typeof fp> => fp !== null
+      );
+
+      // Step 3: Fetch detailed data in parallel for all participating funds
       const summaries: FundSummary[] = [];
       let totalContributed = 0;
       let totalProjectedContribution = 0;
@@ -239,80 +258,78 @@ export class MyDashboardComponent implements OnInit {
       let totalDebt = 0;
       let totalActive = 0;
 
-      for (const fund of funds) {
-        const participants = await this.participantRepo.getByFund(fund.id);
-        const myParticipation = participants.find((p) => p.userId === user.uid);
-        if (!myParticipation) continue;
+      await Promise.all(
+        activeFunds.map(async ({ fund, participants, myParticipation }) => {
+          const [loans, payments, allLoans, period] = await Promise.all([
+            this.loanRepo.getByParticipant(myParticipation.id),
+            this.paymentRepo.getByParticipant(myParticipation.id),
+            this.loanRepo.getByFund(fund.id),
+            this.periodRepo.getById(fund.periodId),
+          ]);
 
-        const [loans, payments, allLoans, period] = await Promise.all([
-          this.loanRepo.getByParticipant(myParticipation.id),
-          this.paymentRepo.getByParticipant(myParticipation.id),
-          this.loanRepo.getByFund(fund.id),
-          this.periodRepo.getById(fund.periodId),
-        ]);
+          const options = Object.values(myParticipation.optionsPerMonth);
+          const currentOptions = options.length > 0 ? options[options.length - 1] : 0;
+          const monthly = currentOptions * fund.optionValue;
 
-        const options = Object.values(myParticipation.optionsPerMonth);
-        const currentOptions = options.length > 0 ? options[options.length - 1] : 0;
-        const monthly = currentOptions * fund.optionValue;
+          // Total contributed by this participant
+          const contributed = payments
+            .filter((p) => p.type === PaymentType.CONTRIBUTION)
+            .reduce((sum, p) => sum + p.amount, 0);
 
-        // Total contributed by this participant
-        const contributed = payments
-          .filter((p) => p.type === PaymentType.CONTRIBUTION)
-          .reduce((sum, p) => sum + p.amount, 0);
+          // Interest earned: participant's share of ALL fund interest
+          const totalFundInterest = allLoans.reduce((sum, l) => sum + l.interestGenerated, 0);
+          const totalFundOptions = participants.reduce((sum, p) => {
+            const opts = Object.values(p.optionsPerMonth);
+            return sum + (opts.length > 0 ? opts[opts.length - 1] : 0);
+          }, 0);
+          const interestShare = totalFundOptions > 0
+            ? (currentOptions / totalFundOptions) * totalFundInterest
+            : 0;
+          const interestPerOption = totalFundOptions > 0 ? totalFundInterest / totalFundOptions : 0;
+          
+          // Interest paid by THIS participant
+          const interestPaid = loans.reduce((sum, l) => sum + l.interestGenerated, 0);
+          const netInterestProfit = interestShare - interestPaid;
 
-        // Interest earned: participant's share of ALL fund interest
-        const totalFundInterest = allLoans.reduce((sum, l) => sum + l.interestGenerated, 0);
-        const totalFundOptions = participants.reduce((sum, p) => {
-          const opts = Object.values(p.optionsPerMonth);
-          return sum + (opts.length > 0 ? opts[opts.length - 1] : 0);
-        }, 0);
-        const interestShare = totalFundOptions > 0
-          ? (currentOptions / totalFundOptions) * totalFundInterest
-          : 0;
-        const interestPerOption = totalFundOptions > 0 ? totalFundInterest / totalFundOptions : 0;
-        
-        // Interest paid by THIS participant
-        const interestPaid = loans.reduce((sum, l) => sum + l.interestGenerated, 0);
-        const netInterestProfit = interestShare - interestPaid;
+          // Active loan debt
+          const activeLoans = loans.filter((l) => l.status === LoanStatus.ACTIVE);
+          const debt = activeLoans.reduce((sum, l) => {
+            const remaining = l.installments.filter((i) => !i.paid).length * l.monthlyPayment;
+            return sum + remaining;
+          }, 0);
 
-        // Active loan debt
-        const activeLoans = loans.filter((l) => l.status === LoanStatus.ACTIVE);
-        const debt = activeLoans.reduce((sum, l) => {
-          const remaining = l.installments.filter((i) => !i.paid).length * l.monthlyPayment;
-          return sum + remaining;
-        }, 0);
+          // En el último mes no se cobra la mensualidad de aporte
+          const monthsCount = period ? Math.max(1, period.months.length - 1) : 1;
+          const projectedTotalContribution = monthly * monthsCount;
+          
+          // Lo acumulado AL MOMENTO (aportes pagados + ganancia neta generada, ignorando deudas de préstamos)
+          const currentBalance = contributed + netInterestProfit;
 
-        // En el último mes no se cobra la mensualidad de aporte
-        const monthsCount = period ? Math.max(1, period.months.length - 1) : 1;
-        const projectedTotalContribution = monthly * monthsCount;
-        
-        // Lo acumulado AL MOMENTO (aportes pagados + ganancia neta generada, ignorando deudas de préstamos)
-        const currentBalance = contributed + netInterestProfit;
+          summaries.push({
+            fund,
+            period,
+            participant: myParticipation,
+            options: currentOptions,
+            monthlyContribution: monthly,
+            activeLoans: activeLoans.length,
+            totalLoanDebt: debt,
+            totalContributed: contributed,
+            projectedTotalContribution,
+            interestEarned: interestShare,
+            interestPaid,
+            interestPerOption,
+            netInterestProfit,
+            projectedReturn: currentBalance,
+          });
 
-        summaries.push({
-          fund,
-          period,
-          participant: myParticipation,
-          options: currentOptions,
-          monthlyContribution: monthly,
-          activeLoans: activeLoans.length,
-          totalLoanDebt: debt,
-          totalContributed: contributed,
-          projectedTotalContribution,
-          interestEarned: interestShare,
-          interestPaid,
-          interestPerOption,
-          netInterestProfit,
-          projectedReturn: currentBalance,
-        });
-
-        totalContributed += contributed;
-        totalProjectedContribution += projectedTotalContribution;
-        totalInterest += interestShare;
-        totalInterestPaid += interestPaid;
-        totalDebt += debt;
-        totalActive += activeLoans.length;
-      }
+          totalContributed += contributed;
+          totalProjectedContribution += projectedTotalContribution;
+          totalInterest += interestShare;
+          totalInterestPaid += interestPaid;
+          totalDebt += debt;
+          totalActive += activeLoans.length;
+        })
+      );
 
       this.fundSummaries.set(summaries);
       this.totalContributed.set(totalContributed);

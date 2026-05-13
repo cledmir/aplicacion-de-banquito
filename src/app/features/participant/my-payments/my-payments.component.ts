@@ -106,6 +106,7 @@ export class MyPaymentsComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
+    await this.auth.authReady;
     await this.loadData();
   }
 
@@ -118,13 +119,20 @@ export class MyPaymentsComponent implements OnInit {
       const funds = await this.fundRepo.getAll();
       const allPayments: PaymentWithFund[] = [];
 
-      for (const fund of funds) {
-        const participants = await this.participantRepo.getByFund(fund.id);
-        const myParticipation = participants.find((p) => p.userId === user.uid);
-        if (!myParticipation) continue;
+      // Parallel: find participations for all funds at once
+      const results = await Promise.all(
+        funds.map(async (fund) => {
+          const participants = await this.participantRepo.getByFund(fund.id);
+          const myParticipation = participants.find((p) => p.userId === user.uid);
+          if (!myParticipation) return [];
 
-        const payments = await this.paymentRepo.getByParticipant(myParticipation.id);
-        allPayments.push(...payments.map((p) => ({ ...p, fundName: fund.name })));
+          const payments = await this.paymentRepo.getByParticipant(myParticipation.id);
+          return payments.map((p) => ({ ...p, fundName: fund.name }));
+        })
+      );
+
+      for (const payments of results) {
+        allPayments.push(...payments);
       }
 
       allPayments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());

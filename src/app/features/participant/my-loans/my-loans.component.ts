@@ -114,6 +114,7 @@ export class MyLoansComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
+    await this.auth.authReady;
     await this.loadData();
   }
 
@@ -126,13 +127,20 @@ export class MyLoansComponent implements OnInit {
       const funds = await this.fundRepo.getAll();
       const allLoans: LoanWithFund[] = [];
 
-      for (const fund of funds) {
-        const participants = await this.participantRepo.getByFund(fund.id);
-        const myParticipation = participants.find((p) => p.userId === user.uid);
-        if (!myParticipation) continue;
+      // Parallel: find participations for all funds at once
+      const results = await Promise.all(
+        funds.map(async (fund) => {
+          const participants = await this.participantRepo.getByFund(fund.id);
+          const myParticipation = participants.find((p) => p.userId === user.uid);
+          if (!myParticipation) return [];
 
-        const loans = await this.loanRepo.getByParticipant(myParticipation.id);
-        allLoans.push(...loans.map((l) => ({ ...l, fundName: fund.name })));
+          const loans = await this.loanRepo.getByParticipant(myParticipation.id);
+          return loans.map((l) => ({ ...l, fundName: fund.name }));
+        })
+      );
+
+      for (const loans of results) {
+        allLoans.push(...loans);
       }
 
       // Sort: active first, then by date

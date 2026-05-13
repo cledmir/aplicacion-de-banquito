@@ -19,6 +19,10 @@ import { UserRole } from '../../core/enums';
 /**
  * Servicio de autenticación. Gestiona login, registro,
  * y el estado del usuario actual usando Signals.
+ *
+ * Expone `authReady` — una Promise que se resuelve cuando
+ * Firebase Auth termina de restaurar la sesión y el perfil
+ * del usuario ya está cargado en el signal `user()`.
  */
 @Injectable({
   providedIn: 'root',
@@ -28,6 +32,9 @@ export class AuthService implements OnDestroy {
   private readonly loading = signal<boolean>(true);
   private readonly authUnsubscribe: Unsubscribe;
 
+  /** Promise que se resuelve cuando Auth termina de inicializar. */
+  readonly authReady: Promise<void>;
+
   readonly user = this.currentUser.asReadonly();
   readonly isLoading = this.loading.asReadonly();
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
@@ -36,10 +43,16 @@ export class AuthService implements OnDestroy {
   readonly isParticipant = computed(() => this.currentUser()?.role === UserRole.PARTICIPANT);
 
   constructor(private readonly firebase: FirebaseService) {
+    let resolveAuth: () => void;
+    this.authReady = new Promise<void>((resolve) => {
+      resolveAuth = resolve;
+    });
+
     this.authUnsubscribe = onAuthStateChanged(this.firebase.auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userData = await this.firebase.getDocument('users', firebaseUser.uid);
-        if (userData) {
+      try {
+        if (firebaseUser) {
+          const userData = await this.firebase.getDocument('users', firebaseUser.uid);
+          if (userData) {
             this.currentUser.set({
               uid: firebaseUser.uid,
               email: firebaseUser.email ?? '',
@@ -48,11 +61,20 @@ export class AuthService implements OnDestroy {
               isPrincipalAdmin: (userData['isPrincipalAdmin'] as boolean) ?? false,
               createdAt: userData['createdAt']?.toDate?.() ?? new Date(),
             });
+          } else {
+            // User exists in Auth but not in Firestore — treat as unauthenticated
+            this.currentUser.set(null);
+          }
+        } else {
+          this.currentUser.set(null);
         }
-      } else {
+      } catch (error) {
+        console.error('Error restoring auth session:', error);
         this.currentUser.set(null);
+      } finally {
+        this.loading.set(false);
+        resolveAuth!();
       }
-      this.loading.set(false);
     });
   }
 

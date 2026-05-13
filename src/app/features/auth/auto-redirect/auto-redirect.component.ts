@@ -45,8 +45,7 @@ export class AutoRedirectComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    // Esperar a que Firebase Auth termine de restaurar la sesión
-    await this.waitForAuth();
+    await this.auth.authReady;
     this.redirect();
   }
 
@@ -58,21 +57,5 @@ export class AutoRedirectComponent implements OnInit {
     } else {
       this.router.navigate(['/auth/login'], { replaceUrl: true });
     }
-  }
-
-  private waitForAuth(): Promise<void> {
-    return new Promise((resolve) => {
-      if (!this.auth.isLoading()) {
-        resolve();
-        return;
-      }
-      const interval = setInterval(() => {
-        if (!this.auth.isLoading()) {
-          clearInterval(interval);
-          resolve();
-        }
-      }, 50);
-      setTimeout(() => { clearInterval(interval); resolve(); }, 5000);
-    });
   }
 }

@@ -10,7 +10,7 @@ export const authGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  await waitForAuth(auth);
+  await auth.authReady;
 
   if (auth.isAuthenticated()) {
     return true;
@@ -19,19 +19,3 @@ export const authGuard: CanActivateFn = async () => {
   router.navigate(['/auth/login']);
   return false;
 };
-
-function waitForAuth(auth: AuthService): Promise<void> {
-  return new Promise((resolve) => {
-    if (!auth.isLoading()) {
-      resolve();
-      return;
-    }
-    const interval = setInterval(() => {
-      if (!auth.isLoading()) {
-        clearInterval(interval);
-        resolve();
-      }
-    }, 50);
-    setTimeout(() => { clearInterval(interval); resolve(); }, 5000);
-  });
-}
