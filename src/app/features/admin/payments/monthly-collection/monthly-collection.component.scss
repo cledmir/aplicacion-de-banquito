@@ -45,6 +45,12 @@
     mat-icon { margin-right: 4px; }
   }
 
+  .undo-all-btn {
+    color: #ef4444 !important;
+    border-color: rgba(#ef4444, 0.35) !important;
+    &:hover { background: rgba(#ef4444, 0.08) !important; }
+  }
+
   .processing-text {
     font-size: $font-size-sm;
     color: $color-accent;

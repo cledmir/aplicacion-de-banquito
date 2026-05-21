@@ -96,13 +96,22 @@ interface CollectionRow {
             </div>
           </div>
 
-          @if (hasPendingPayments() && fund()?.status !== FundStatus.CLOSED) {
+          @if (fund()?.status !== FundStatus.CLOSED) {
             <div class="bulk-actions">
-              <button mat-flat-button color="primary" class="bulk-btn"
-                      (click)="collectAll()" [disabled]="isProcessing()">
-                <mat-icon>done_all</mat-icon>
-                Cobrar todo pendiente
-              </button>
+              @if (hasPendingPayments()) {
+                <button mat-flat-button color="primary" class="bulk-btn"
+                        (click)="collectAll()" [disabled]="isProcessing()">
+                  <mat-icon>done_all</mat-icon>
+                  Cobrar todo
+                </button>
+              }
+              @if (hasPaidPayments()) {
+                <button mat-stroked-button color="warn" class="bulk-btn undo-all-btn"
+                        (click)="confirmReverseAll()" [disabled]="isProcessing()">
+                  <mat-icon>undo</mat-icon>
+                  Anular todo
+                </button>
+              }
               @if (isProcessing()) {
                 <span class="processing-text">Procesando... {{ processedCount() }}/{{ totalToProcess() }}</span>
               }
@@ -170,18 +179,18 @@ interface CollectionRow {
                     </button>
                   }
 
-                  <!-- Descobrar -->
+                  <!-- Anular pago -->
                   @if (row.contributionPaid && row.contributionDue > 0) {
                     <button mat-stroked-button class="undo-btn"
                             (click)="confirmReverseContribution(row)"
-                            title="Descobrar aporte">
+                            title="Anular aporte">
                       <mat-icon>undo</mat-icon>
                     </button>
                   }
                   @if (row.activeLoan && row.loanPaid) {
                     <button mat-stroked-button class="undo-btn loan"
                             (click)="confirmReverseLoanPayment(row)"
-                            title="Descobrar cuota">
+                            title="Anular cuota">
                       <mat-icon>undo</mat-icon>
                     </button>
                   }
@@ -216,6 +225,7 @@ export class MonthlyCollectionComponent implements OnInit {
   totalExpected = signal(0);
   totalCollected = signal(0);
   hasPendingPayments = signal(false);
+  hasPaidPayments = signal(false);
   isProcessing = signal(false);
   isLoading = signal(true);
   processedCount = signal(0);
@@ -352,6 +362,12 @@ export class MonthlyCollectionComponent implements OnInit {
         (r) => !r.contributionPaid || (r.activeLoan && !r.loanPaid),
       );
       this.hasPendingPayments.set(hasPending);
+
+      // Check if there are any paid payments that can be reversed
+      const hasPaid = collectionRows.some(
+        (r) => (r.contributionPaid && r.contributionDue > 0) || (r.activeLoan && r.loanPaid),
+      );
+      this.hasPaidPayments.set(hasPaid);
     } catch (error) {
       console.error('Error loading month data:', error);
     } finally {
@@ -462,12 +478,12 @@ export class MonthlyCollectionComponent implements OnInit {
     }
   }
 
-  // ===== Descobrar (Reversal) =====
+  // ===== Anular pagos (Reversal) =====
 
   confirmReverseContribution(row: CollectionRow): void {
     const snackRef = this.snackBar.open(
-      `¿Descobrar aporte de ${row.participant.name} (S/ ${row.contributionDue.toFixed(2)})?`,
-      'Sí, descobrar',
+      `¿Anular aporte de ${row.participant.name} (S/ ${row.contributionDue.toFixed(2)})?`,
+      'Sí, anular',
       { duration: 6000 },
     );
     snackRef.onAction().subscribe(() => {
@@ -477,8 +493,8 @@ export class MonthlyCollectionComponent implements OnInit {
 
   confirmReverseLoanPayment(row: CollectionRow): void {
     const snackRef = this.snackBar.open(
-      `¿Descobrar cuota de préstamo de ${row.participant.name} (S/ ${row.loanPaymentDue.toFixed(2)})?`,
-      'Sí, descobrar',
+      `¿Anular cuota de ${row.participant.name} (S/ ${row.loanPaymentDue.toFixed(2)})?`,
+      'Sí, anular',
       { duration: 6000 },
     );
     snackRef.onAction().subscribe(() => {
@@ -486,29 +502,86 @@ export class MonthlyCollectionComponent implements OnInit {
     });
   }
 
+  confirmReverseAll(): void {
+    const paidRows = this.rows().filter(
+      (r) => (r.contributionPaid && r.contributionDue > 0) || (r.activeLoan && r.loanPaid),
+    );
+    const snackRef = this.snackBar.open(
+      `¿Anular todos los cobros del mes? (${paidRows.length} participantes afectados)`,
+      'Sí, anular todo',
+      { duration: 8000 },
+    );
+    snackRef.onAction().subscribe(() => {
+      this.reverseAll();
+    });
+  }
+
+  private async reverseAll(): Promise<void> {
+    const paidRows = this.rows().filter(
+      (r) => (r.contributionPaid && r.contributionPaymentId && r.contributionDue > 0) ||
+             (r.activeLoan && r.loanPaid && r.loanPaymentId),
+    );
+
+    let totalOps = paidRows.reduce((sum, r) => {
+      let ops = 0;
+      if (r.contributionPaid && r.contributionPaymentId && r.contributionDue > 0) ops++;
+      if (r.activeLoan && r.loanPaid && r.loanPaymentId) ops++;
+      return sum + ops;
+    }, 0);
+
+    this.totalToProcess.set(totalOps);
+    this.processedCount.set(0);
+    this.isProcessing.set(true);
+
+    try {
+      for (const row of paidRows) {
+        // Reverse contribution
+        if (row.contributionPaid && row.contributionPaymentId && row.contributionDue > 0) {
+          await this.paymentRepo.delete(row.contributionPaymentId);
+          this.processedCount.update((c) => c + 1);
+        }
+
+        // Reverse loan payment
+        if (row.activeLoan && row.loanPaid && row.loanPaymentId) {
+          await this.paymentRepo.delete(row.loanPaymentId);
+          await this.loanRepo.unpayInstallment(row.activeLoan.id, this.selectedMonth);
+          this.processedCount.update((c) => c + 1);
+        }
+      }
+
+      this.snackBar.open('↩️ Todos los cobros del mes fueron anulados', 'OK', { duration: 3000 });
+      await this.loadMonthData();
+    } catch (error) {
+      console.error('Error reversing all:', error);
+      this.snackBar.open('Error al anular cobros', 'OK', { duration: 3000 });
+    } finally {
+      this.isProcessing.set(false);
+    }
+  }
+
   private async reverseContribution(row: CollectionRow): Promise<void> {
     if (!row.contributionPaymentId) {
-      this.snackBar.open('No se encontró el registro de pago para revertir', 'OK', { duration: 3000 });
+      this.snackBar.open('No se encontró el registro de pago', 'OK', { duration: 3000 });
       return;
     }
 
     try {
       await this.paymentRepo.delete(row.contributionPaymentId);
       this.snackBar.open(
-        `↩️ Aporte de ${row.participant.name} descobrado`,
+        `↩️ Aporte de ${row.participant.name} anulado`,
         'OK',
         { duration: 3000 },
       );
       await this.loadMonthData();
     } catch (error) {
       console.error('Error reversing contribution:', error);
-      this.snackBar.open('Error al descobrar aporte', 'OK', { duration: 3000 });
+      this.snackBar.open('Error al anular aporte', 'OK', { duration: 3000 });
     }
   }
 
   private async reverseLoanPayment(row: CollectionRow): Promise<void> {
     if (!row.loanPaymentId || !row.activeLoan) {
-      this.snackBar.open('No se encontró el registro de pago para revertir', 'OK', { duration: 3000 });
+      this.snackBar.open('No se encontró el registro de pago', 'OK', { duration: 3000 });
       return;
     }
 
@@ -520,14 +593,14 @@ export class MonthlyCollectionComponent implements OnInit {
       await this.loanRepo.unpayInstallment(row.activeLoan.id, this.selectedMonth);
 
       this.snackBar.open(
-        `↩️ Cuota de ${row.participant.name} descobrada`,
+        `↩️ Cuota de ${row.participant.name} anulada`,
         'OK',
         { duration: 3000 },
       );
       await this.loadMonthData();
     } catch (error) {
       console.error('Error reversing loan payment:', error);
-      this.snackBar.open('Error al descobrar cuota', 'OK', { duration: 3000 });
+      this.snackBar.open('Error al anular cuota', 'OK', { duration: 3000 });
     }
   }
 
