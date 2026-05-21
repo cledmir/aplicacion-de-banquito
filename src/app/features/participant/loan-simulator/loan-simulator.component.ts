@@ -237,10 +237,9 @@ export class LoanSimulatorComponent implements OnInit {
           ]);
 
           const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
-          const totalLoaned = fundLoans
-            .filter((l) => l.status === 'active')
-            .reduce((sum, l) => sum + l.amount, 0);
-          const balance = Math.max(0, totalCollected - totalLoaned);
+          // Subtract ALL loans (active + paid) — paid loan repayments are already in totalCollected
+          const totalLoaned = fundLoans.reduce((sum, l) => sum + l.amount, 0);
+          const balance = Math.round(Math.max(0, totalCollected - totalLoaned) * 100) / 100;
 
           return { fund, availableBalance: balance } as SimulatorFund;
         })

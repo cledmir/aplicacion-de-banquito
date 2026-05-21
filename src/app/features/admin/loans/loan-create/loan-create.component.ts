@@ -237,12 +237,13 @@ export class LoanCreateComponent implements OnInit {
         this.period.set(period);
         this.participants.set(participants);
 
-        // Calculate available balance: total payments received - total loans given out
+        // Calculate available balance: total payments received - ALL loans given out
+        // Must subtract ALL loans (active + paid) because paid loan repayments
+        // are already counted in totalCollected via loan_payment records.
         const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
-        const totalLoaned = loans
-          .filter((l) => l.status === 'active')
-          .reduce((sum, l) => sum + l.amount, 0);
-        const balance = Math.max(0, totalCollected - totalLoaned);
+        const totalLoaned = loans.reduce((sum, l) => sum + l.amount, 0);
+        // Round to 2 decimals to avoid floating point artifacts
+        const balance = Math.round(Math.max(0, totalCollected - totalLoaned) * 100) / 100;
         this.availableBalance.set(balance);
         this.loanAmount = balance;
 

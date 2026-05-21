@@ -93,6 +93,28 @@ export class LoanRepository {
     });
   }
 
+  /**
+   * Revierte el pago de una cuota de préstamo (descobrar).
+   * Marca la cuota del mes como no pagada y re-activa el préstamo si estaba pagado.
+   */
+  async unpayInstallment(loanId: string, month: string): Promise<void> {
+    const loan = await this.getById(loanId);
+    if (!loan) throw new Error('Préstamo no encontrado');
+
+    const updatedInstallments = loan.installments.map((inst) => {
+      if (inst.month === month && inst.paid) {
+        return { ...inst, paid: false, paidAt: null };
+      }
+      return inst;
+    });
+
+    // If we unpaid an installment, the loan must be ACTIVE again
+    await this.firebase.updateDocument(this.COLLECTION, loanId, {
+      installments: updatedInstallments,
+      status: LoanStatus.ACTIVE,
+    });
+  }
+
   async delete(id: string): Promise<void> {
     await this.firebase.deleteDocument(this.COLLECTION, id);
   }

@@ -28,6 +28,9 @@ interface CollectionRow {
   contributionPaid: boolean;
   loanPaid: boolean;
   activeLoan: Loan | null;
+  // Payment IDs for reversal
+  contributionPaymentId: string | null;
+  loanPaymentId: string | null;
 }
 
 @Component({
@@ -151,6 +154,7 @@ interface CollectionRow {
                 @if (fund()?.status === FundStatus.CLOSED) {
                   <mat-icon class="closed-lock" title="Fondo cerrado">lock</mat-icon>
                 } @else {
+                  <!-- Cobrar -->
                   @if (!row.contributionPaid) {
                     <button mat-stroked-button class="pay-btn"
                             (click)="registerContribution(row)">
@@ -165,7 +169,24 @@ interface CollectionRow {
                       Cuota
                     </button>
                   }
-                  @if (row.contributionPaid && (row.loanPaid || !row.activeLoan)) {
+
+                  <!-- Descobrar -->
+                  @if (row.contributionPaid && row.contributionDue > 0) {
+                    <button mat-stroked-button class="undo-btn"
+                            (click)="confirmReverseContribution(row)"
+                            title="Descobrar aporte">
+                      <mat-icon>undo</mat-icon>
+                    </button>
+                  }
+                  @if (row.activeLoan && row.loanPaid) {
+                    <button mat-stroked-button class="undo-btn loan"
+                            (click)="confirmReverseLoanPayment(row)"
+                            title="Descobrar cuota">
+                      <mat-icon>undo</mat-icon>
+                    </button>
+                  }
+
+                  @if (row.contributionPaid && (row.loanPaid || !row.activeLoan) && row.contributionDue === 0) {
                     <span class="all-paid-badge">✅ Completo</span>
                   }
                 }
@@ -272,20 +293,30 @@ export class MonthlyCollectionComponent implements OnInit {
 
         const activeLoan = loans.find(
           (l) => l.participantId === p.id &&
-            l.status === 'active' &&
+            l.status !== LoanStatus.PAID &&
             l.installments.some((inst) => inst.month === this.selectedMonth),
+        ) ?? loans.find(
+          // Also check paid loans that have an installment for this month (for reversal)
+          (l) => l.participantId === p.id &&
+            l.installments.some((inst) => inst.month === this.selectedMonth && inst.paid),
         ) ?? null;
 
         const loanPaymentDue = activeLoan?.monthlyPayment ?? 0;
 
+        // Find the actual payment records for reversal
+        const contributionPayment = payments.find(
+          (pay) => pay.participantId === p.id && pay.type === PaymentType.CONTRIBUTION
+        );
+        const loanPayment = payments.find(
+          (pay) => pay.participantId === p.id && pay.type === PaymentType.LOAN_PAYMENT
+        );
+
         const contributionPaid = isLastMonth 
           ? true // Automatically consider paid since it's 0
-          : payments.some((pay) => pay.participantId === p.id && pay.type === PaymentType.CONTRIBUTION);
+          : !!contributionPayment;
           
         const loanPaid = activeLoan
-          ? payments.some(
-              (pay) => pay.participantId === p.id && pay.type === PaymentType.LOAN_PAYMENT,
-            )
+          ? !!loanPayment
           : true;
 
         return {
@@ -297,6 +328,8 @@ export class MonthlyCollectionComponent implements OnInit {
           contributionPaid,
           loanPaid,
           activeLoan,
+          contributionPaymentId: contributionPayment?.id ?? null,
+          loanPaymentId: loanPayment?.id ?? null,
         };
       });
 
@@ -310,8 +343,9 @@ export class MonthlyCollectionComponent implements OnInit {
         return sum + paid;
       }, 0);
 
-      this.totalExpected.set(expected);
-      this.totalCollected.set(collected);
+      // Round to 2 decimals to avoid floating point issues
+      this.totalExpected.set(Math.round(expected * 100) / 100);
+      this.totalCollected.set(Math.round(collected * 100) / 100);
 
       // Check if there are pending payments
       const hasPending = collectionRows.some(
@@ -425,6 +459,75 @@ export class MonthlyCollectionComponent implements OnInit {
     } catch (error) {
       console.error('Error registering loan payment:', error);
       this.snackBar.open('Error al registrar cuota', 'OK', { duration: 3000 });
+    }
+  }
+
+  // ===== Descobrar (Reversal) =====
+
+  confirmReverseContribution(row: CollectionRow): void {
+    const snackRef = this.snackBar.open(
+      `¿Descobrar aporte de ${row.participant.name} (S/ ${row.contributionDue.toFixed(2)})?`,
+      'Sí, descobrar',
+      { duration: 6000 },
+    );
+    snackRef.onAction().subscribe(() => {
+      this.reverseContribution(row);
+    });
+  }
+
+  confirmReverseLoanPayment(row: CollectionRow): void {
+    const snackRef = this.snackBar.open(
+      `¿Descobrar cuota de préstamo de ${row.participant.name} (S/ ${row.loanPaymentDue.toFixed(2)})?`,
+      'Sí, descobrar',
+      { duration: 6000 },
+    );
+    snackRef.onAction().subscribe(() => {
+      this.reverseLoanPayment(row);
+    });
+  }
+
+  private async reverseContribution(row: CollectionRow): Promise<void> {
+    if (!row.contributionPaymentId) {
+      this.snackBar.open('No se encontró el registro de pago para revertir', 'OK', { duration: 3000 });
+      return;
+    }
+
+    try {
+      await this.paymentRepo.delete(row.contributionPaymentId);
+      this.snackBar.open(
+        `↩️ Aporte de ${row.participant.name} descobrado`,
+        'OK',
+        { duration: 3000 },
+      );
+      await this.loadMonthData();
+    } catch (error) {
+      console.error('Error reversing contribution:', error);
+      this.snackBar.open('Error al descobrar aporte', 'OK', { duration: 3000 });
+    }
+  }
+
+  private async reverseLoanPayment(row: CollectionRow): Promise<void> {
+    if (!row.loanPaymentId || !row.activeLoan) {
+      this.snackBar.open('No se encontró el registro de pago para revertir', 'OK', { duration: 3000 });
+      return;
+    }
+
+    try {
+      // 1. Delete the payment record
+      await this.paymentRepo.delete(row.loanPaymentId);
+
+      // 2. Reverse the installment payment in the loan
+      await this.loanRepo.unpayInstallment(row.activeLoan.id, this.selectedMonth);
+
+      this.snackBar.open(
+        `↩️ Cuota de ${row.participant.name} descobrada`,
+        'OK',
+        { duration: 3000 },
+      );
+      await this.loadMonthData();
+    } catch (error) {
+      console.error('Error reversing loan payment:', error);
+      this.snackBar.open('Error al descobrar cuota', 'OK', { duration: 3000 });
     }
   }
 
